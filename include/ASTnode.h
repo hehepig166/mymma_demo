@@ -91,7 +91,7 @@ ASTnode *InsertSon_move(ASTnode *node, ASTnode *son_, ASTnode *preSon_);
 // 解除 node 的一个儿子 son_，但不解构，返回 son_ 
 // 请确保 son_ 是 node 的儿子
 // 慎用！
-ASTnode *UnmountSon(ASTnode *node, ASTnode *son_);
+ASTnode *UnmountSon(ASTnode *node, ASTnode *son_, ASTnode *preNode_, ASTnode *nxtNode_);
 
 // 解构并删除 node 的一个儿子 son_
 // 注意维护好 son_ 的 pre/nxt

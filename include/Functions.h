@@ -29,4 +29,6 @@ ASTnode *Function(ASTnode *node);
 
 ASTnode *Apply(ASTnode *node);
 
+ASTnode *If(ASTnode *node);
+
 #endif

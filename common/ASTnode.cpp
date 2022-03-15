@@ -142,21 +142,21 @@ ASTnode *InsertSon_move(ASTnode *node, ASTnode *son_, ASTnode *preSon_)
 }
 
 
-ASTnode *UnmountSon(ASTnode *node, ASTnode *son_)
+ASTnode *UnmountSon(ASTnode *node, ASTnode *son_, ASTnode *preNode_, ASTnode *nxtNode_)
 {
     if (!node || !son_) {return NULL;}
     node->nodeInfo->sonCnt--;
     son_->preNode->nxtNode = son_->nxtNode;
     son_->nxtNode->preNode = son_->preNode;
-    son_->preNode = NULL;
-    son_->nxtNode = NULL;
+    son_->preNode = preNode_;
+    son_->nxtNode = nxtNode_;
     return son_;
 }
 
 ASTnode *DeleteSon(ASTnode *node, ASTnode *son_)
 {
     ASTnode *ret = son_->preNode;
-    UnmountSon(node, son_);
+    UnmountSon(node, son_, NULL, NULL);
     Destroy(son_);
     return ret;
 }

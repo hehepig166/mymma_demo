@@ -34,7 +34,6 @@ ASTnode *tmpParse()
 
     static char ch=getchar();
     string curstr;
-    int curint=0;
     while (ch==' ' || ch=='\n')
         ch=getchar();
     
@@ -46,11 +45,18 @@ ASTnode *tmpParse()
         return NULL;
     }
 
-    if (isdigit(ch)) {   // Number
+    if (ch == '-' || isdigit(ch)) {   // Number
+        int curint=0;
+        int sig=1;
+        while (ch=='-') {
+            sig*= -1;
+            ch = getchar();
+        }
         while (ch>='0' && ch<='9') {
             curint = curint*10+ch-'0';
             ch = getchar();
         }
+        curint*=sig;
         ret = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", NULL, NULL);
         SetNodeVal(ret, VALTYPE_INTEGER, &curint);
     }
@@ -165,7 +171,7 @@ int main()
         printf("\n> ");
         root = tmpParse();
         ASTnode *dup = Duplicate(root, NULL, NULL);
-        //puts("");
+        puts("");
 
         printf("In//FullForm = ");
         Print(root);

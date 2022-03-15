@@ -276,6 +276,23 @@
         => Plus[a, Times[b,b,b]]
     ```
 
+* If
+    * 判断
+    * `If[expr0, expr1, expr2]`，代表判断 expr0 的值，若为真(或非零)，则返回 expr1 的值，若为假(或零)，则返回 expr2 的值
+    * Only[3]
+    * 开始摆烂了，只能先做超级弱小版的 mathematica 了，很多更多的语法先不支持了。
+    * 好像 mathematica 里面数字不能当布尔值，只有 True 或者 False 是有效的。但是我这个没写语法分析，所以写EqualQ这种太麻烦了，先凑合着吧。
+    ```
+    If[True, a, b]
+        => a
+    If[False, a, b]
+        => b
+    If[1, a, b]
+        => a
+    If[0, a, b]
+        => b
+    ```
+
 # 3. 实现细节
 
 * 20220301
@@ -310,6 +327,7 @@
 ||20220303|test_ASTnode.cpp<br>ASTnode.h ASTnode.cpp <br> Functions.h Functions.cpp|Plus 的结合性 <br>SetDelayed<br> **!!重要!!发现Destroy有内存泄漏bug，改好了，并在测试中加了几个用于测试内存的小工具函数**|
 ||20220304|ASTnode.h ASTnode.cpp<br>Functions.h Functions.cpp<br>Variable.h Variable.cpp|改了ASTnode的定义，变成带头尾节点的双向链表，这样各种操作可以更简洁<br>发现使用变量名计算时会造成内存泄露，修复了（错在Compute函数中对Var的计算忘记Destroy(node)了）<br>Plus 对整数的合并<br>Times的结合性、对整数的合并|
 ||20220305|Functions.h Functions.cpp|Function, Apply，实现了自定义函数|
+||20220315|ASTnode.h ASTnode.cpp <br> Functions.h Functions.cpp|发现Compute那里对于左右节点的右左节点没修改好，可能导致指针错误丢内存，改了，目前没发现问题了 <br> If 语句 <br> 为 ASTnode 的 Unmount 函数添加了必须指明的 preNode_ 和 nxtNode_ 参数，也是为了时刻提醒别丢内存 <br> 还发现了Apply函数那里，临时map里面应该复制一份而不是把全局函数表的地址存着，因为可能在递归的时候全局函数表的地址被覆盖、释放了 <br> 为了做斐波那契数列的函数，在简陋词法分析里面加入了识别负整数|
 
 # 一些 mathematica 代码
 ```
@@ -338,5 +356,38 @@ In := Times[AtomQ[1], 0]
 In := Set[a, 1]; Apply[Function[List[a, b], Times[a, b]], List[5, 6]]
 
 In := Set[f, Function[List[x, y], Plus[Times[x,x,x], Times[y, y]]]]; Apply[f, List[2, 3]]
+
+In :=   SetDelayed[ preSum,
+            Function[ List[n],
+                If[ n,
+                    Plus[n, Apply[preSum, List[Plus[n, -1]]]],
+                    0
+                ]
+            ]
+        ]
+
+In :=   SetDelayed[ fib,
+            Function[ List[n],
+                If[ Plus[n, -1],
+                    If[ Plus[n, -2],
+                        Plus[
+                            Apply[fib, List[Plus[n, -1]]],
+                            Apply[fib, List[Plus[n, -2]]]
+                        ],
+                        1
+                    ],
+                    1
+                ]
+            ]
+        ];
+        SetDelayed[ showFib,
+            Function[ List[num],
+                If[ num,
+                    o[Apply[showFib, List[Plus[num, -1]]], Apply[fib, List[num]]],
+                    end
+                ]
+            ]
+        ];
+        Apply[ showFib, List[5]]
 
 ```

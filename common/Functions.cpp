@@ -19,6 +19,12 @@ static ASTnode *ComputeSons(ASTnode *node);
 // 返回是否是基本元素
 static bool IsAtom(const ASTnode *node);
 
+// 返回是否是 True 或 False 或纯数字
+static bool IsBool(const ASTnode *node);
+
+// 返回是否是 True 或 数字0
+static bool IsTrue(const ASTnode *node);
+
 // 若是基本元素，则调用相应的函数输出它
 static void PrintIfBasic(const ASTnode *node);
 
@@ -30,7 +36,12 @@ static ASTnode *UpmountGrandSons(ASTnode *node, ASTnode *son);
 
 static bool CheckFunction(const ASTnode *node);
 
-
+static ASTnode *mergeLR(ASTnode *node)
+{
+    if (node->preNode) node->preNode->nxtNode = node;
+    if (node->nxtNode) node->nxtNode->preNode = node;
+    return node;
+}
 
 
 
@@ -40,6 +51,7 @@ static bool CheckFunction(const ASTnode *node);
 ASTnode *Compute(ASTnode *node)
 {
     if (!node) {return NULL;}
+
 
     // 暂时只需要处理函数
     // 由于还没建函数对应表，所以枚举比较字符串
@@ -70,6 +82,9 @@ ASTnode *Compute(ASTnode *node)
             if (funName == "Apply") {
                 return Apply(node);
             }
+            if (funName == "If") {
+                return If(node);
+            }
             return ComputeSons(node);
             break;
         }
@@ -82,6 +97,8 @@ ASTnode *Compute(ASTnode *node)
             tmp = Compute(Duplicate(tmp, node->preNode, node->nxtNode));
             Destroy(node);
             node = tmp;
+            if (node->preNode) node->preNode->nxtNode = node;
+            if (node->nxtNode) node->nxtNode->preNode = node;
             break;
         }
     }
@@ -132,7 +149,7 @@ ASTnode *Set(ASTnode *node)
     // 重要！！解构原节点
     Destroy(node);
 
-    return RHS;
+    return mergeLR(RHS);
 }
 
 // 延时赋值
@@ -173,7 +190,7 @@ ASTnode *SetDelayed(ASTnode *node)
     // 重要！！解构原节点
     Destroy(node);
 
-    return RHS;
+    return mergeLR(RHS);
 }
 
 
@@ -192,7 +209,7 @@ void Print(const ASTnode *node)
 
 ASTnode *FullForm(ASTnode *node)
 {
-    return ComputeSons(node);
+    return mergeLR(ComputeSons(node));
 }
 
 ASTnode *AtomQ(ASTnode *node)
@@ -210,9 +227,9 @@ ASTnode *AtomQ(ASTnode *node)
     ASTnode *nxt=node->nxtNode;
     Destroy(node);
     if (isAtom)
-        return CreateNode(NODETYPE_SYMBOL_TRUE, "Symbol", pre, nxt);
+        return mergeLR(CreateNode(NODETYPE_SYMBOL_TRUE, "Symbol", pre, nxt));
     else
-        return CreateNode(NODETYPE_SYMBOL_FALSE, "Symbol", pre, nxt);
+        return mergeLR(CreateNode(NODETYPE_SYMBOL_FALSE, "Symbol", pre, nxt));
 }
 
 
@@ -227,14 +244,14 @@ ASTnode *Plus(ASTnode *node)
         Integer tmp0 = Integer(0);
         SetNodeVal(ret, VALTYPE_INTEGER, &tmp0);
         Destroy(node);
-        return ret;
+        return mergeLR(ret);
     }
 
     // 要是只有一个参数，则把这个儿子挂上来，并清除加法节点
     if (node->nodeInfo->sonCnt == 1) {
         ASTnode *ret = Duplicate(node->sonHead->nxtNode, node->preNode, node->nxtNode);
         Destroy(node);
-        return ret;
+        return mergeLR(ret);
     }
 
     // 要是有多个参数，先结合律，把同为Plus的儿子展开挂上来
@@ -274,20 +291,18 @@ ASTnode *Plus(ASTnode *node)
             node = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", tmp->preNode, tmp->nxtNode);
             SetNodeVal(node, VALTYPE_INTEGER, &ZERO_INTEGER);
             Destroy(tmp);
-            return node;
+            return mergeLR(node);
             break;
         }
         case 1: {
             ASTnode *tmp = node;
-            node = UnmountSon(tmp, tmp->sonHead->nxtNode);
-            node->preNode = tmp->preNode;
-            node->nxtNode = tmp->nxtNode;
+            node = UnmountSon(tmp, tmp->sonHead->nxtNode, tmp->preNode, tmp->nxtNode);
             Destroy(tmp);
-            return node;
+            return mergeLR(node);
             break;
         }
         default: {
-            return node;
+            return mergeLR(node);
         }
     }
 }
@@ -304,14 +319,14 @@ ASTnode *Times(ASTnode *node)
         Integer tmp0 = Integer(1);
         SetNodeVal(ret, VALTYPE_INTEGER, &tmp0);
         Destroy(node);
-        return ret;
+        return mergeLR(ret);
     }
 
     // 要是只有一个参数，则把这个儿子挂上来，并清除加法节点
     if (node->nodeInfo->sonCnt == 1) {
         ASTnode *ret = Duplicate(node->sonHead->nxtNode, node->preNode, node->nxtNode);
         Destroy(node);
-        return ret;
+        return mergeLR(ret);
     }
 
     // 要是有多个参数，先结合律，把同为Plus的儿子展开挂上来
@@ -350,20 +365,18 @@ ASTnode *Times(ASTnode *node)
             node = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", tmp->preNode, tmp->nxtNode);
             SetNodeVal(node, VALTYPE_INTEGER, &ONE_INTEGER);
             Destroy(tmp);
-            return node;
+            return mergeLR(node);
             break;
         }
         case 1: {
             ASTnode *tmp = node;
-            node = UnmountSon(tmp, tmp->sonHead->nxtNode);
-            node->preNode = tmp->preNode;
-            node->nxtNode = tmp->nxtNode;
+            node = UnmountSon(tmp, tmp->sonHead->nxtNode, tmp->preNode, tmp->nxtNode);
             Destroy(tmp);
-            return node;
+            return mergeLR(node);
             break;
         }
         default: {
-            return node;
+            return mergeLR(node);
         }
     }
 }
@@ -385,6 +398,12 @@ ASTnode *Apply(ASTnode *node)
 
     //node->sonHead->nxtNode = Compute(node->sonHead->nxtNode);
     node = ComputeSons(node);
+    //node->sonHead->nxtNode->nxtNode = mergeLR(Compute(node->sonHead->nxtNode->nxtNode));
+
+    //PrintFullForm(node);
+    //puts("");
+    //getchar();
+
     ASTnode *s1 = node->sonHead->nxtNode;
     ASTnode *s2 = s1->nxtNode;
     if (CheckFunction(s1)) {
@@ -401,7 +420,7 @@ ASTnode *Apply(ASTnode *node)
             if (pName->nodeInfo->nodeType == NODETYPE_SYMBOL_VARNAME) {
                 std::string str = *((std::string*)(pName->nodeVal));
                 if (tmpVarMap.find(str)==tmpVarMap.end()) {
-                    tmpVarMap[str]=VariableTable::FindVarNode(str);
+                    tmpVarMap[str]=Duplicate(VariableTable::FindVarNode(str), NULL, NULL);
                     VariableTable::SetVarNode(str, pVal);
                 }
                 else {  //说明变量表有重复
@@ -417,8 +436,9 @@ ASTnode *Apply(ASTnode *node)
 
         // 计算
         if (!fail) {
-            ASTnode *tmpNode = Compute(Duplicate(s1->sonHead->nxtNode->nxtNode, node->preNode, node->nxtNode));
+            ASTnode *tmpNode = Duplicate(s1->sonHead->nxtNode->nxtNode, node->preNode, node->nxtNode);
             Destroy(node);
+            tmpNode = Compute(tmpNode);
             node = tmpNode;
         }
 
@@ -427,32 +447,65 @@ ASTnode *Apply(ASTnode *node)
         for (iter = tmpVarMap.begin(); iter!=tmpVarMap.end(); iter++) {
             if (iter->second) {
                 VariableTable::SetVarNode(iter->first, iter->second);
+                Destroy(iter->second);
             }
             else {
                 VariableTable::EraseVar(iter->first);
             }
         }
 
-        return node;
+        return mergeLR(node);
     }
     else if (s1->nodeInfo->nodeType == NODETYPE_SYMBOL_VARNAME) {
-        s1 = Compute(s1);
-        if (s1->nodeInfo->nodeType == NODETYPE_SYMBOL_VARNAME) {
+        if (s1->nodeInfo->nodeType == NODETYPE_SYMBOL_VARNAME) {    // 直接替换
             // Apply[Plus, {1,2,3}];
             ASTnode *ret = CreateNode(NODETYPE_SYMBOL_FUNCTION, *((std::string*)s1->nodeVal), node->preNode, node->nxtNode);
             ASTnode *i=s2->sonHead->nxtNode;
             ASTnode *tmpi;
             while (i!=s2->sonTail) {
                 tmpi=i->nxtNode;
-                AppendSon_move(ret, UnmountSon(s1, i));
+                AppendSon_move(ret, UnmountSon(s1, i, NULL, NULL));
                 i=tmpi;
             }
             Destroy(node);
-            return Compute(ret);
+            node = ret;
         }
+        return mergeLR(Compute(node));
     }
 
-    return node;
+    return mergeLR(node);
+}
+
+
+ASTnode *If(ASTnode *node)
+{
+    if (!node) return NULL;
+
+    // 检查
+    if (node->nodeInfo->sonCnt != 3) {
+        return mergeLR(Compute(node));
+    }
+
+    ASTnode *tmp;
+
+    // 先计算判断
+    node->sonHead->nxtNode = Compute(node->sonHead->nxtNode);
+
+    // 若不是可判断的布尔型（暂时定为数字或True或False）
+    tmp = node->sonHead->nxtNode;
+    if (!IsBool(tmp)) {
+        return mergeLR(ComputeSons(node));
+    }
+
+    if (IsTrue(tmp)) {
+        tmp= UnmountSon(node, node->sonHead->nxtNode->nxtNode, node->preNode, node->nxtNode);
+    }
+    else {
+        tmp= UnmountSon(node, node->sonHead->nxtNode->nxtNode->nxtNode, node->preNode, node->nxtNode);
+    }
+    tmp= Compute(tmp);
+    Destroy(node);
+    return mergeLR(tmp);
 }
 
 
@@ -496,6 +549,28 @@ static bool IsAtom(const ASTnode *node)
                 case NODETYPE_SYMBOL_FALSE:
                     return true;
             }
+    }
+
+    return false;
+}
+
+static bool IsBool(const ASTnode *node)
+{
+    if (!node) return false;
+    if (node->nodeInfo->nodeType == NODETYPE_SYMBOL_TRUE) return true;
+    if (node->nodeInfo->nodeType == NODETYPE_SYMBOL_FALSE) return true;
+    if ((node->nodeInfo->nodeType & NODETYPEBITS) == NODETYPE_NUMBER) return true;
+    return false;
+}
+
+static bool IsTrue(const ASTnode *node)
+{
+    if (!node) return false;
+    if (node->nodeInfo->nodeType == NODETYPE_SYMBOL_TRUE)
+        return true;
+    
+    if (node->nodeInfo->nodeType == NODETYPE_NUMBER_INTEGER) {
+        return !(*((Integer*)(node->nodeVal))==ZERO_INTEGER);
     }
 
     return false;
@@ -553,18 +628,18 @@ static ASTnode *UpmountGrandSons(ASTnode *node, ASTnode *son)
 {
     if (!node || !son) {return node;}
     ASTnode *ret = son->preNode;
-    son = UnmountSon(node, son);
+    son = UnmountSon(node, son, NULL, NULL);
     ASTnode *p = son->sonHead->nxtNode;
     ASTnode *pnxt;
     while (p!=son->sonTail) {
         pnxt = p->nxtNode;
-        UnmountSon(son, p);
+        p=UnmountSon(son, p, NULL, NULL);
         InsertSon_move(node, p, ret);
         ret = ret->nxtNode;
         p = pnxt;
     }
     Destroy(son);
-    return ret;
+    return mergeLR(ret);
 }
 
 static bool CheckFunction(const ASTnode *node)
