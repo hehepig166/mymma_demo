@@ -328,6 +328,7 @@
 ||20220304|ASTnode.h ASTnode.cpp<br>Functions.h Functions.cpp<br>Variable.h Variable.cpp|改了ASTnode的定义，变成带头尾节点的双向链表，这样各种操作可以更简洁<br>发现使用变量名计算时会造成内存泄露，修复了（错在Compute函数中对Var的计算忘记Destroy(node)了）<br>Plus 对整数的合并<br>Times的结合性、对整数的合并|
 ||20220305|Functions.h Functions.cpp|Function, Apply，实现了自定义函数|
 ||20220315|ASTnode.h ASTnode.cpp <br> Functions.h Functions.cpp|发现Compute那里对于左右节点的右左节点没修改好，可能导致指针错误丢内存，改了，目前没发现问题了 <br> If 语句 <br> 为 ASTnode 的 Unmount 函数添加了必须指明的 preNode_ 和 nxtNode_ 参数，也是为了时刻提醒别丢内存 <br> 还发现了Apply函数那里，临时map里面应该复制一份而不是把全局函数表的地址存着，因为可能在递归的时候全局函数表的地址被覆盖、释放了 <br> 为了做斐波那契数列的函数，在简陋词法分析里面加入了识别负整数|
+||20220316|Functions.h Functions.cpp|调整了一下Compute，使自定义函数能直接 f[] 这样调用，不需要再手动 Apply 了 <br> 发现现在我这个函数递归用的栈空间，导致递归层数不能太多，不过mma好像递归层数也是限制在了1024，最终还是要在恒等优化上下功夫|
 
 # 一些 mathematica 代码
 ```
@@ -360,7 +361,7 @@ In := Set[f, Function[List[x, y], Plus[Times[x,x,x], Times[y, y]]]]; Apply[f, Li
 In :=   SetDelayed[ preSum,
             Function[ List[n],
                 If[ n,
-                    Plus[n, Apply[preSum, List[Plus[n, -1]]]],
+                    Plus[n, preSum[Plus[n, -1]]],
                     0
                 ]
             ]
@@ -371,8 +372,8 @@ In :=   SetDelayed[ fib,
                 If[ Plus[n, -1],
                     If[ Plus[n, -2],
                         Plus[
-                            Apply[fib, List[Plus[n, -1]]],
-                            Apply[fib, List[Plus[n, -2]]]
+                            fib[Plus[n, -2]],
+                            fib[Plus[n, -1]]
                         ],
                         1
                     ],
@@ -383,7 +384,7 @@ In :=   SetDelayed[ fib,
         SetDelayed[ showFib,
             Function[ List[num],
                 If[ num,
-                    o[Apply[showFib, List[Plus[num, -1]]], Apply[fib, List[num]]],
+                    o[showFib[Plus[num, -1]], fib[num]],
                     end
                 ]
             ]

@@ -85,6 +85,19 @@ ASTnode *Compute(ASTnode *node)
             if (funName == "If") {
                 return If(node);
             }
+
+            if (VariableTable::FindVarNode(node->nodeInfo->headName)) {
+                ASTnode *nodeApply = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Apply", node->preNode, node->nxtNode);
+                ASTnode *nodeHead = CreateNode(NODETYPE_SYMBOL_VARNAME, "Symbol", NULL, NULL);
+                SetNodeVal(nodeHead, VALTYPE_STRING, &(node->nodeInfo->headName));
+                node->nodeInfo->headName = "List";
+                node->preNode = node->nxtNode = NULL;   //живЊ
+                AppendSon_move(nodeApply, nodeHead);
+                AppendSon_move(nodeApply, node);
+                node=nodeApply;
+                return Compute(mergeLR(node));
+            }
+
             return ComputeSons(node);
             break;
         }
