@@ -36,6 +36,7 @@ static ASTnode *UpmountGrandSons(ASTnode *node, ASTnode *son);
 
 static bool CheckFunction(const ASTnode *node);
 
+// 最好在每个函数 return 时都 mergeLE 一下
 static ASTnode *mergeLR(ASTnode *node)
 {
     if (node->preNode) node->preNode->nxtNode = node;
@@ -72,6 +73,12 @@ ASTnode *Compute(ASTnode *node)
             }
             if (funName == "Times") {
                 return Times(node);
+            }
+            if (funName == "Quotient") {
+                return Quotient(node);
+            }
+            if (funName == "Mod") {
+                return Mod(node);
             }
             if (funName == "SetDelayed") {
                 return SetDelayed(node);
@@ -395,6 +402,61 @@ ASTnode *Times(ASTnode *node)
 }
 
 
+ASTnode *Quotient(ASTnode *node)
+{
+    if (!node) {return NULL;}
+    node = ComputeSons(node);
+
+    // 检查，只接收两个 Integer
+    if (node->nodeInfo->sonCnt != 2) {
+        return mergeLR(node);
+    }
+    if (node->sonHead->nxtNode->nodeInfo->nodeType != NODETYPE_NUMBER_INTEGER) {
+        return mergeLR(node);
+    }
+    if (node->sonHead->nxtNode->nxtNode->nodeInfo->nodeType != NODETYPE_NUMBER_INTEGER) {
+        return mergeLR(node);
+    }
+
+    ASTnode *ret = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", node->preNode, node->nxtNode);
+    node->preNode = node->nxtNode = NULL;
+    Integer a1 = *((Integer*)(node->sonHead->nxtNode->nodeVal));
+    Integer a2 = *((Integer*)(node->sonHead->nxtNode->nxtNode->nodeVal));
+    a1/=a2;
+    SetNodeVal(ret, VALTYPE_INTEGER, &a1);
+    Destroy(node);
+
+    return mergeLR(ret);
+}
+
+ASTnode *Mod(ASTnode *node)
+{
+    if (!node) {return NULL;}
+    node = ComputeSons(node);
+
+    // 检查，只接收两个 Integer
+    if (node->nodeInfo->sonCnt != 2) {
+        return mergeLR(node);
+    }
+    if (node->sonHead->nxtNode->nodeInfo->nodeType != NODETYPE_NUMBER_INTEGER) {
+        return mergeLR(node);
+    }
+    if (node->sonHead->nxtNode->nxtNode->nodeInfo->nodeType != NODETYPE_NUMBER_INTEGER) {
+        return mergeLR(node);
+    }
+
+    ASTnode *ret = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", node->preNode, node->nxtNode);
+    node->preNode = node->nxtNode = NULL;
+    Integer a1 = *((Integer*)(node->sonHead->nxtNode->nodeVal));
+    Integer a2 = *((Integer*)(node->sonHead->nxtNode->nxtNode->nodeVal));
+    a1%=a2;
+    SetNodeVal(ret, VALTYPE_INTEGER, &a1);
+    Destroy(node);
+
+    return mergeLR(ret);
+}
+
+
 ASTnode *Function(ASTnode *node)
 {
     return node;
@@ -504,10 +566,10 @@ ASTnode *If(ASTnode *node)
     // 先计算判断
     node->sonHead->nxtNode = Compute(node->sonHead->nxtNode);
 
-    // 若不是可判断的布尔型（暂时定为数字或True或False）
+    // 若不是可判断的布尔型（暂时定为数字或True或False），则不计算
     tmp = node->sonHead->nxtNode;
     if (!IsBool(tmp)) {
-        return mergeLR(ComputeSons(node));
+        return mergeLR(node);
     }
 
     if (IsTrue(tmp)) {

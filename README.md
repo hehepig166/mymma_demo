@@ -293,6 +293,21 @@
         => b
     ```
 
+* Quotient
+    * 商
+    * `Quotient[m, n]`，代表 the integer quotient of m and n.
+    ```
+    Quotient[5,2]
+    ``` 
+
+* Mod
+    * 取模
+    * `Mod[m, n]`
+    ```
+    Mod[8, 3]
+    ```
+
+
 # 3. 实现细节
 
 * 20220301
@@ -329,6 +344,7 @@
 ||20220305|Functions.h Functions.cpp|Function, Apply，实现了自定义函数|
 ||20220315|ASTnode.h ASTnode.cpp <br> Functions.h Functions.cpp|发现Compute那里对于左右节点的右左节点没修改好，可能导致指针错误丢内存，改了，目前没发现问题了 <br> If 语句 <br> 为 ASTnode 的 Unmount 函数添加了必须指明的 preNode_ 和 nxtNode_ 参数，也是为了时刻提醒别丢内存 <br> 还发现了Apply函数那里，临时map里面应该复制一份而不是把全局函数表的地址存着，因为可能在递归的时候全局函数表的地址被覆盖、释放了 <br> 为了做斐波那契数列的函数，在简陋词法分析里面加入了识别负整数|
 ||20220316|Functions.h Functions.cpp|调整了一下Compute，使自定义函数能直接 f[] 这样调用，不需要再手动 Apply 了 <br> 发现现在我这个函数递归用的栈空间，导致递归层数不能太多，不过mma好像递归层数也是限制在了1024，最终还是要在恒等优化上下功夫|
+||20220318|Functions.cpp Functions.h <br> Integer.h|Quotient, Mod|
 
 # 一些 mathematica 代码
 ```
@@ -390,5 +406,20 @@ In :=   SetDelayed[ fib,
             ]
         ];
         Apply[ showFib, List[5]]
+
+In :=   SetDelayed[power, Function[
+            List[x, k],
+            If[k, Times[x, power[x, Plus[k, -1]]], 1]
+        ]]
+
+In :=   SetDelayed[ksm, Function[
+            List[x, k],
+            If[k,
+                If[Mod[k, 2],
+                    Times[x, ksm[Times[x,x], Quotient[k, 2]]],
+                    ksm[Times[x,x], Quotient[k, 2]]
+                ]
+            ,1]
+        ]]
 
 ```

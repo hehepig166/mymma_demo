@@ -173,14 +173,16 @@ int main()
         ASTnode *dup = Duplicate(root, NULL, NULL);
         puts("");
 
+/*
         printf("In//FullForm = ");
         Print(root);
         puts("");
+*/
 
         root = Compute(root);
         printf("Out//FullForm = ");
         Print(root);
-        puts("");
+        puts("\n");
 
 
         Destroy(root);

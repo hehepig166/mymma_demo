@@ -21,6 +21,9 @@ ASTnode *Plus(ASTnode *node);
 
 ASTnode *Times(ASTnode *node);
 
+ASTnode *Quotient(ASTnode *node);
+
+ASTnode *Mod(ASTnode *Mod);
 
 
 ASTnode *List(ASTnode *node);
