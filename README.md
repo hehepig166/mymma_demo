@@ -278,18 +278,18 @@
 
 * If
     * 判断
-    * `If[expr0, expr1, expr2]`，代表判断 expr0 的值，若为真(或非零)，则返回 expr1 的值，若为假(或零)，则返回 expr2 的值
+    * `If[expr0, expr1, expr2]`，代表判断 expr0 的值。若为True，则返回 expr1 的值；若为False，则返回 expr2 的值；都不是则保留原样。
     * Only[3]
     * 开始摆烂了，只能先做超级弱小版的 mathematica 了，很多更多的语法先不支持了。
-    * 好像 mathematica 里面数字不能当布尔值，只有 True 或者 False 是有效的。但是我这个没写语法分析，所以写EqualQ这种太麻烦了，先凑合着吧。
+    * mathematica 里面数字不能当布尔值，只有 True 或者 False 是有效的。
     ```
     If[True, a, b]
         => a
     If[False, a, b]
         => b
-    If[1, a, b]
+    If[Equal[1, 1], a, b]
         => a
-    If[0, a, b]
+    If[Equal[1, 0], a, b]
         => b
     ```
 
@@ -306,6 +306,56 @@
     ```
     Mod[8, 3]
     ```
+
+* Equal
+    * 判断是否相等
+    * `Equal[expr1, expr2]`
+    ```
+    Equal[1, 1]
+        => True
+
+    Equal[1, 0]
+        => False
+
+    Equal[a, b]
+        => Equal[a, b]
+    
+    Equal[a, 1]
+        => Equal[a, 1]
+    
+    Set[a, 1]; Equal[a, 1]
+        => True
+
+    Equal[Plus[a, a], Times[2, a]]
+        => True
+
+    Equal[1, 1, 1, 1]
+        => True
+
+    Equal[1, 1, 0, 1]
+        => False
+
+    Equal[1, 1, 1, a]
+        => Equal[1, 1, 1, a]
+    
+    Set[a, 1]; Equal[1, 1, 1, a]
+        => True
+    ```
+
+* Flatten
+    * 展开
+    * Flatten[List]，将List完全展开
+    * 说明：这只是 mathematica Flatten 的一部分
+    ```
+    Flatten[List[List[1], b, List[2,3,4], 6]]
+        => List[1, b, 2, 3, 4, 6]
+    
+    Flatten[List[List[]]]
+        => List[]
+    ```
+
+* Exit[]
+    * 退出
 
 
 # 3. 实现细节
@@ -345,6 +395,7 @@
 ||20220315|ASTnode.h ASTnode.cpp <br> Functions.h Functions.cpp|发现Compute那里对于左右节点的右左节点没修改好，可能导致指针错误丢内存，改了，目前没发现问题了 <br> If 语句 <br> 为 ASTnode 的 Unmount 函数添加了必须指明的 preNode_ 和 nxtNode_ 参数，也是为了时刻提醒别丢内存 <br> 还发现了Apply函数那里，临时map里面应该复制一份而不是把全局函数表的地址存着，因为可能在递归的时候全局函数表的地址被覆盖、释放了 <br> 为了做斐波那契数列的函数，在简陋词法分析里面加入了识别负整数|
 ||20220316|Functions.h Functions.cpp|调整了一下Compute，使自定义函数能直接 f[] 这样调用，不需要再手动 Apply 了 <br> 发现现在我这个函数递归用的栈空间，导致递归层数不能太多，不过mma好像递归层数也是限制在了1024，最终还是要在恒等优化上下功夫|
 ||20220318|Functions.cpp Functions.h <br> Integer.h|Quotient, Mod|
+||20220319|Functions.cpp Functions.h <br> ASTnode.cpp|Flatten<br>在测试 `Flatten[List[List[]]]`时发现了CreateASTnode中的风险：没给sonHead->preNode, sonTail->nxtNode 初始化，可能会导致非法地址访问，又找到并修改了一个内存bug<br>Help, Exit<br>用g++工具发现有内存泄漏的情况，最后发现是临时写的test_ASTnode.cpp最后没有VariableTable::EraseAllVars()，这也确实不合理，到时候应该把VariableTable弄成可以分离出来的对像自动析构<br>Equal，把If改了，数字不能看作布尔值了，只能是True或False<br>至此已经可以编程进行整数分解了|
 
 # 一些 mathematica 代码
 ```
@@ -376,50 +427,103 @@ In := Set[f, Function[List[x, y], Plus[Times[x,x,x], Times[y, y]]]]; Apply[f, Li
 
 In :=   SetDelayed[ preSum,
             Function[ List[n],
-                If[ n,
+                If[ Equal[n,0],0,
                     Plus[n, preSum[Plus[n, -1]]],
-                    0
                 ]
             ]
         ]
 
 In :=   SetDelayed[ fib,
             Function[ List[n],
-                If[ Plus[n, -1],
-                    If[ Plus[n, -2],
+                If[ Equal[n, 1], 1,
+                    If[ Equal[n, 2], 2,
                         Plus[
                             fib[Plus[n, -2]],
                             fib[Plus[n, -1]]
-                        ],
-                        1
-                    ],
-                    1
+                        ]
+                    ]
                 ]
             ]
-        ];
+        ]
         SetDelayed[ showFib,
             Function[ List[num],
-                If[ num,
-                    o[showFib[Plus[num, -1]], fib[num]],
-                    end
+                If[ Equal[num,0], end,
+                    List[showFib[Plus[num, -1]], fib[num]],
                 ]
             ]
-        ];
-        Apply[ showFib, List[5]]
+        ]
+        showFib[25]
+        Flatten[showFib[25]]
 
 In :=   SetDelayed[power, Function[
             List[x, k],
-            If[k, Times[x, power[x, Plus[k, -1]]], 1]
+            If[Equal[k, 0], 1, Times[x, power[x, Plus[k, -1]]]]
         ]]
 
 In :=   SetDelayed[ksm, Function[
             List[x, k],
-            If[k,
-                If[Mod[k, 2],
-                    Times[x, ksm[Times[x,x], Quotient[k, 2]]],
-                    ksm[Times[x,x], Quotient[k, 2]]
+            If[Equal[k, 0], 1,
+                If[Equal[Mod[k, 2], 0],
+                    ksm[Times[x,x], Quotient[k, 2]],
+                    Times[x, ksm[Times[x,x], Quotient[k, 2]]]
                 ]
-            ,1]
+            ]
         ]]
+        ksm[Plus[a, 10], 5];
+        ksm[Times[a, 10], 5];
+
+In :=   Flatten[List[a, b, List[c], d]]
+
+In :=   Flatten[List[List[]]]
+
+In :=   Flatten[List[List[], a, List[b, c, List[d, e], f, fun[List[g]]], Plus[a, b, 5, 6]]]
+
+In :=   Set[digits, Function[List[n],
+            If[Equal[n, 0], List[],
+                Flatten[List[ digits[Quotient[n, 10]], Mod[n, 10] ]]
+            ]
+        ]]
+        digits[666233]
+        Set[fun, Function[List[x],
+            Apply[Plus, digits[x]]
+        ]]
+        fun[666233]
+
+In :=   Set[a, 1]; Equal[1, 1, 1, a]
+
+In :=   幂运算
+        SetDelayed[power, Function[
+            List[x, k],
+            If[Equal[k, 0], 1,
+                If[Equal[Mod[k, 2], 0],
+                    power[Times[x,x], Quotient[k, 2]],
+                    Times[x, power[Times[x,x], Quotient[k, 2]]]
+                ]
+            ]
+        ]]
+
+        获取次数
+        SetDelayed[getm, Function[ List[n, k],
+            If[ Equal[Mod[n, k], 0],
+                Plus[1, getm[Quotient[n, k], k]],
+                0
+            ]
+        ]]
+
+        分解辅助
+        SetDelayed[fac, Function[ List[n, k],
+            If[ Equal[n, 1], List[],
+                If[ Equal[n, k], g[k, 1],
+                    If[ Equal[Set[nk, getm[n, k]], 0],
+                        fac[Quotient[n, power[k, nk]], Plus[k, 1]],
+                        Flatten[List[g[k, nk], fac[Quotient[n, power[k, nk]], Plus[k, 1]]]]
+                    ]
+                ]
+            ]
+        ]]
+
+        分解
+        SetDelayed[factors, Function[List[n], fac[n, 2]]]
+
 
 ```

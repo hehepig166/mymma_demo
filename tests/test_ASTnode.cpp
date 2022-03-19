@@ -1,11 +1,13 @@
 #include "../include/ASTnode.h"
 #include "../include/Integer.h"
 #include "../include/Functions.h"
+#include "../include/Variable.h"
 #include <iostream>
 #include <string>
 #include <cstring>
 using namespace std;
 
+static int done;
 
 void fun()
 {
@@ -100,6 +102,9 @@ ASTnode *tmpParse()
                 ret = CreateNode(NODETYPE_SYMBOL_VARNAME, "Symbol", NULL, NULL);
                 SetNodeVal(ret, VALTYPE_STRING, &curstr);
             }
+            if (curstr == "Exit") {   
+                done = 1;
+            }
         }
     }
     else {
@@ -134,7 +139,7 @@ void test_Duplicate()
     ASTnode *A = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", NULL, NULL);
     SetNodeVal(A, VALTYPE_INTEGER, &tmpint);
 
-    for (int i=1; i<=1000000; i++) {
+    for (int i=1; i<=100000; i++) {
         tmp = Duplicate(A, NULL, NULL);
         Destroy(tmp);
     }
@@ -167,7 +172,9 @@ int main()
 
     ASTnode *root;
 
-    while (1) {
+    done=0;
+
+    while (!done) {
         printf("\n> ");
         root = tmpParse();
         ASTnode *dup = Duplicate(root, NULL, NULL);
@@ -188,5 +195,7 @@ int main()
         Destroy(root);
         Destroy(dup);
     }
+
+    VariableTable::EraseAllVars();
     return 0;
 }

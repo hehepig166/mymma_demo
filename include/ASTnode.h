@@ -42,6 +42,11 @@ struct ASTnodeInfo {
     
     std::string headName;
     int headID;
+
+    bool operator!=(const ASTnodeInfo &X) {
+        return nodeType!=X.nodeType || valType!=X.valType || sonCnt!=X.sonCnt ||
+            headName!=X.headName || headID!=X.headID ;
+    }
 };
 
 struct ASTnode {

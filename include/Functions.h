@@ -5,6 +5,8 @@
 
 void Print(const ASTnode *node);
 
+void Help();
+
 ASTnode *Compute(ASTnode *node);
 
 ASTnode *Set(ASTnode *node);
@@ -16,6 +18,9 @@ ASTnode *FullForm(ASTnode *node);
 
 
 ASTnode *AtomQ(ASTnode *node);
+
+ASTnode *Equal(ASTnode *node);
+
 
 ASTnode *Plus(ASTnode *node);
 
@@ -33,5 +38,7 @@ ASTnode *Function(ASTnode *node);
 ASTnode *Apply(ASTnode *node);
 
 ASTnode *If(ASTnode *node);
+
+ASTnode *Flatten(ASTnode *node);
 
 #endif

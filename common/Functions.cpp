@@ -14,6 +14,8 @@ static Integer ONE_INTEGER = Integer(1);
   局部工具函数以及变量
 =================================================================*/
 
+static void PrintHelp();
+
 static ASTnode *ComputeSons(ASTnode *node);
 
 // 返回是否是基本元素
@@ -24,6 +26,13 @@ static bool IsBool(const ASTnode *node);
 
 // 返回是否是 True 或 数字0
 static bool IsTrue(const ASTnode *node);
+
+static bool IsNumber(const ASTnode *node);
+
+// 是否可比
+static bool _Comparable(const ASTnode *n1, const ASTnode *n2);
+// 二元判等于，使用前应先判断_Comparable
+static bool _Equal(const ASTnode *n1, const ASTnode *n2);
 
 // 若是基本元素，则调用相应的函数输出它
 static void PrintIfBasic(const ASTnode *node);
@@ -36,9 +45,10 @@ static ASTnode *UpmountGrandSons(ASTnode *node, ASTnode *son);
 
 static bool CheckFunction(const ASTnode *node);
 
-// 最好在每个函数 return 时都 mergeLE 一下
+// 最好在每个函数 return 时都 mergeLR 一下
 static ASTnode *mergeLR(ASTnode *node)
 {
+    if (!node) return NULL;
     if (node->preNode) node->preNode->nxtNode = node;
     if (node->nxtNode) node->nxtNode->preNode = node;
     return node;
@@ -91,6 +101,17 @@ ASTnode *Compute(ASTnode *node)
             }
             if (funName == "If") {
                 return If(node);
+            }
+            if (funName == "Flatten") {
+                return Flatten(node);
+            }
+            if (funName == "Equal") {
+                return Equal(node);
+            }
+
+
+            if (funName == "Help") {
+                PrintHelp();
             }
 
             if (VariableTable::FindVarNode(node->nodeInfo->headName)) {
@@ -150,11 +171,7 @@ ASTnode *Set(ASTnode *node)
     }
 
     // 检验完成，将RHS分离出来，等一下准备取代 node
-    RHS->preNode->nxtNode = RHS->nxtNode;
-    RHS->nxtNode->preNode = RHS->preNode;
-    node->nodeInfo->sonCnt--;
-    RHS->preNode = node->preNode;
-    RHS->nxtNode = node->nxtNode;
+    RHS = UnmountSon(node, RHS, node->preNode, node->nxtNode);
 
     // 获取变量名
     std::string varName = *((std::string*)(LHS->nodeVal));
@@ -191,11 +208,7 @@ ASTnode *SetDelayed(ASTnode *node)
     }
 
     // 检验完成，将RHS分离出来，等一下准备取代 node
-    RHS->preNode->nxtNode = RHS->nxtNode;
-    RHS->nxtNode->preNode = RHS->preNode;
-    node->nodeInfo->sonCnt--;
-    RHS->preNode = node->preNode;
-    RHS->nxtNode = node->nxtNode;
+    RHS = UnmountSon(node, RHS, node->preNode, node->nxtNode);
 
     // 获取变量名
     std::string varName = *((std::string*)(LHS->nodeVal));
@@ -250,6 +263,46 @@ ASTnode *AtomQ(ASTnode *node)
         return mergeLR(CreateNode(NODETYPE_SYMBOL_TRUE, "Symbol", pre, nxt));
     else
         return mergeLR(CreateNode(NODETYPE_SYMBOL_FALSE, "Symbol", pre, nxt));
+}
+
+ASTnode *Equal(ASTnode *node)
+{
+    if (!node) {return NULL;}
+    int flag=1;
+    // 1: True
+    // 2: False
+    // 3: 保留
+
+    node = ComputeSons(node);
+
+    ASTnode *tmp = node->sonHead->nxtNode;
+    for (ASTnode *p = tmp->nxtNode; p!=node->sonTail;) {
+        ASTnode *nxt = p->nxtNode;
+        if (!_Comparable(tmp, p)) {
+            flag = 3;
+            break;
+        }
+        if (!_Equal(tmp, p)) {
+            flag = 2;
+            break;
+        }
+        p=nxt;
+    }
+
+    ASTnode *ret;
+    if (flag == 1) {
+        ret = CreateNode(NODETYPE_SYMBOL_TRUE, "Symbol", node->preNode, node->nxtNode);
+    }
+    else if (flag == 2) {
+        ret = CreateNode(NODETYPE_SYMBOL_FALSE, "Symbol", node->preNode, node->nxtNode);
+    }
+    else {
+        ret = node;
+        node = NULL;
+    }
+
+    Destroy(node);    
+    return mergeLR(ret);
 }
 
 
@@ -584,6 +637,36 @@ ASTnode *If(ASTnode *node)
 }
 
 
+ASTnode *Flatten(ASTnode *node)
+{
+    if (!node) return NULL;
+    node = ComputeSons(node);
+
+    // 检查，若是对List节点Flatten，则可以
+    if (node->nodeInfo->headName == "List") {
+        for (ASTnode *p = node->sonHead->nxtNode; p!=node->sonTail; p=p->nxtNode) {
+            p = Compute(p);
+            if (p->nodeInfo->headName == "List") {
+                p = Flatten(p);
+                p = UpmountGrandSons(node, p);
+            }
+        }
+
+        return mergeLR(node);
+    }
+
+    // 检查，若是对Flatten函数节点Flatten，儿子必须是一个List
+    if (node->nodeInfo->sonCnt != 1 || node->sonHead->nxtNode->nodeInfo->headName != "List") {
+        puts("warning: Flatten just accept one List!!");
+        return node;
+    }
+    ASTnode *ret = UnmountSon(node, node->sonHead->nxtNode, node->preNode, node->nxtNode);
+    Destroy(node);
+    ret = Flatten(ret);
+    return mergeLR(ret);
+}
+
+
 /*=================================================================
   本地函数
 =================================================================*/
@@ -634,7 +717,6 @@ static bool IsBool(const ASTnode *node)
     if (!node) return false;
     if (node->nodeInfo->nodeType == NODETYPE_SYMBOL_TRUE) return true;
     if (node->nodeInfo->nodeType == NODETYPE_SYMBOL_FALSE) return true;
-    if ((node->nodeInfo->nodeType & NODETYPEBITS) == NODETYPE_NUMBER) return true;
     return false;
 }
 
@@ -650,6 +732,43 @@ static bool IsTrue(const ASTnode *node)
 
     return false;
 }
+
+static bool IsNumber(const ASTnode *node)
+{
+    if ((node->nodeInfo->nodeType & NODETYPEBITS) == NODETYPE_NUMBER) {
+        return true;
+    }
+    return false;
+}
+
+
+static bool _Comparable(const ASTnode *n1, const ASTnode *n2)
+{
+    if (IsNumber(n1) && IsNumber(n2)) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool _Equal(const ASTnode *n1, const ASTnode *n2)
+{
+    if (!n1 || !n2) {return false;}
+
+    // 先判断nodeInfo是否相等
+    if (*(n1->nodeInfo) != *(n2->nodeInfo)) {
+        return false;
+    }
+
+    // 然后就分情况讨论了
+    if (n1->nodeInfo->nodeType == NODETYPE_NUMBER_INTEGER) {
+        return (*((Integer*)(n1->nodeVal)) == *((Integer*)(n2->nodeVal)));
+    }
+
+    return false;
+}
+
+
 
 static void PrintIfBasic(const ASTnode *node)
 {
@@ -746,4 +865,36 @@ static bool CheckFunction(const ASTnode *node)
         return false;
     }
     return true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+void PrintHelp()
+{
+    puts("Set[varName, expr]");
+    puts("SetDelayed[varName, expr]");
+    puts("FullForm[expr]");
+    puts("AtomQ[expr]");
+    puts("Equal[expr1, expr2, ...]");
+    puts("Plus[expr1, expr2, ...]");
+    puts("Times[expr1, expr2, ...]");
+    puts("Quotient[divisor, dividend]");
+    puts("Mod[divisor, dividend]");
+    puts("List[expr1, expr2, ...]");
+    puts("Function[List, expr]");
+    puts("Apply[func, List]");
+    puts("If[judgeExpr, trueExpr, falseExpr]]");
+    puts("Flatten[List]");
+    puts("Help[]");
+    puts("Exit");
 }

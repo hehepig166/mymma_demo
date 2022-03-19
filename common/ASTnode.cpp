@@ -10,7 +10,9 @@ ASTnode *CreateNode(int nodeType_, std::string headName_, const ASTnode *preNode
     ret->nodeVal = NULL;
     ret->sonHead = new ASTnode;
     ret->sonTail = new ASTnode;
+    ret->sonHead->preNode = NULL;   // !!重要 20220318
     ret->sonHead->nxtNode = ret->sonTail;
+    ret->sonTail->preNode = NULL;   // !!重要 20220318
     ret->sonTail->preNode = ret->sonHead;
     ret->preNode = (ASTnode*)preNode_;
     ret->nxtNode = (ASTnode*)nxtNode_;
@@ -21,11 +23,13 @@ ASTnode *CreateNode(int nodeType_, std::string headName_, const ASTnode *preNode
     ret->nodeInfo->headName = headName_;
     ret->nodeInfo->headID = 0;    //暂置
 
+    //printf("Create Node %d %s %d %d\n",ret, headName_.c_str(), ret->preNode, ret->nxtNode);
     return ret;
 }
 
 void DestroyNodeVal(ASTnode *node)
 {
+    //puts("DestroyNodeVal");
     if (!node) {return;}
     int vt = node->nodeInfo->valType;
     node->nodeInfo->valType = VALTYPE_NULL;
@@ -56,6 +60,7 @@ void DestroyNodeVal(ASTnode *node)
 void SetNodeVal_move(ASTnode *node, int valType_, void *val_)
 {
     if (!node) {return;}
+    //puts("SetNodeVal_move");
     DestroyNodeVal(node);
     node->nodeInfo->valType = valType_;
     node->nodeVal = val_;
@@ -65,6 +70,7 @@ void SetNodeVal_move(ASTnode *node, int valType_, void *val_)
 void SetNodeVal(ASTnode *node, int valType_, const void *val_)
 {
     if (!node) {return;}
+    //puts("SetNodeVal");
     DestroyNodeVal(node);
     node->nodeInfo->valType = valType_;
 
@@ -194,7 +200,7 @@ ASTnode *Duplicate(const ASTnode *node, const ASTnode *preNode_, const ASTnode *
 void Destroy(ASTnode *node)
 {
     if (!node) {return;}
-
+    //printf("Destroy node %d\n", node);
     DestroyNodeVal(node);
     delete node->nodeInfo;
 
