@@ -77,16 +77,9 @@ struct ASTnode {
 
     //~ASTnode();
 
-    const bool operator<(const ASTnode &X) {
-        if (*(nodeInfo) != *(X.nodeInfo)) return *(nodeInfo) < *(X.nodeInfo);
-        if (nodeInfo->valType == VALTYPE_INTEGER) {
-            return *((Integer*)(nodeVal)) < *((Integer*)(X.nodeVal));
-        }
-        if (nodeInfo->valType == VALTYPE_STRING) {
-            return *((std::string*)(nodeVal)) < *((std::string*)(X.nodeVal));
-        }
-        return false;
-    }
+    const bool operator==(const ASTnode &X);
+
+    const bool operator<(const ASTnode &X);
 };
 
 

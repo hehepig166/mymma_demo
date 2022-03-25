@@ -2,6 +2,33 @@
 #include "../include/Integer.h"
 #include <cstdio>
 
+static bool _ASTnode_Equal(const ASTnode *A, const ASTnode *B);
+
+static bool _ASTnode_Less(const ASTnode *A, const ASTnode *B);
+
+//==========================================================
+//
+//==========================================================
+
+const bool ASTnode::operator==(const ASTnode &X)
+{
+    return _ASTnode_Equal(this, &X);
+}
+
+const bool ASTnode::operator<(const ASTnode &X)
+{
+    return _ASTnode_Less(this, &X);
+}
+
+
+
+//==========================================================
+//
+//==========================================================
+
+
+
+
 
 ASTnode *CreateNode(int nodeType_, std::string headName_, const ASTnode *preNode_, const ASTnode *nxtNode_)
 {
@@ -216,4 +243,68 @@ void Destroy(ASTnode *node)
     delete node->sonTail;
     // 重要！！！别忘了把自己释放掉 -20220303
     delete node;
+}
+
+
+
+
+
+
+
+//==========================================================
+//
+//==========================================================
+
+
+
+
+
+static bool _ASTnode_Equal(const ASTnode *A, const ASTnode *B)
+{
+    if (*(A->nodeInfo) != *(B->nodeInfo)) return false;
+
+    // 函数的话还要递归比较
+    if (A->nodeInfo->nodeType == NODETYPE_SYMBOL_FUNCTION) {
+        const ASTnode *p1=A->sonHead->nxtNode;
+        const ASTnode *p2=B->sonHead->nxtNode;
+        for (; p1!=A->sonTail; p1=p1->nxtNode, p2=p2->nxtNode) {
+            if (!_ASTnode_Equal(p1, p2))
+                return false;
+        }
+        return true;
+    }
+
+    if (A->nodeInfo->valType == VALTYPE_INTEGER) {
+        return *((Integer*)(A->nodeVal)) == *((Integer*)(B->nodeVal));
+    }
+
+    if (A->nodeInfo->valType == VALTYPE_STRING) {
+        return *((std::string*)(A->nodeVal)) == *((std::string*)(B->nodeVal));
+    }
+
+    return false;
+}
+
+static bool _ASTnode_Less(const ASTnode *A, const ASTnode *B)
+{
+    if (*(A->nodeInfo) != *(B->nodeInfo)) return *(A->nodeInfo) < *(B->nodeInfo);
+
+    // 函数的话还要递归比较
+    if (A->nodeInfo->nodeType == NODETYPE_SYMBOL_FUNCTION) {
+        const ASTnode *p1=A->sonHead->nxtNode;
+        const ASTnode *p2=B->sonHead->nxtNode;
+        for (; p1!=A->sonTail; p1=p1->nxtNode, p2=p2->nxtNode) {
+            if (!_ASTnode_Equal(p1, p2))
+                return _ASTnode_Less(p1, p2);
+        }
+        return true;
+    }
+
+    if (A->nodeInfo->valType == VALTYPE_INTEGER) {
+        return *((Integer*)(A->nodeVal)) < *((Integer*)(B->nodeVal));
+    }
+    if (A->nodeInfo->valType == VALTYPE_STRING) {
+        return *((std::string*)(A->nodeVal)) < *((std::string*)(B->nodeVal));
+    }
+    return false;
 }
