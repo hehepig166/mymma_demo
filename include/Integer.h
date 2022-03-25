@@ -16,9 +16,11 @@ struct Integer {
 
     void operator+=(const Integer &x) {val+=x.val;}
     void operator*=(const Integer &x) {val*=x.val;}
-    bool operator==(const Integer &x) {return val==x.val;}
     void operator/=(const Integer &x) {val/=x.val;}
     void operator%=(const Integer &x) {val%=x.val;}
+
+    const bool operator==(const Integer &x) {return val==x.val;}
+    const bool operator<(const Integer &x) {return val<x.val;}
 };
 
 

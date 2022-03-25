@@ -354,6 +354,15 @@
         => List[]
     ```
 
+* Sort
+    * 排序
+    * Sort[List]，排序List中的内容
+    ```
+    Sort[List[1, 5, 2, 4]]
+    Sort[List[a, b, fun[d, e], fun[a, b], x, 1, 2]]
+    Sort[List[fun[2, 4], Times[a, d, b, 7], fun[1, 2], 7, a, 1, 2, b, a]]
+    ```
+
 * Exit[]
     * 退出
 
@@ -396,6 +405,7 @@
 ||20220316|Functions.h Functions.cpp|调整了一下Compute，使自定义函数能直接 f[] 这样调用，不需要再手动 Apply 了 <br> 发现现在我这个函数递归用的栈空间，导致递归层数不能太多，不过mma好像递归层数也是限制在了1024，最终还是要在恒等优化上下功夫|
 ||20220318|Functions.cpp Functions.h <br> Integer.h|Quotient, Mod|
 ||20220319|Functions.cpp Functions.h <br> ASTnode.cpp|Flatten<br>在测试 `Flatten[List[List[]]]`时发现了CreateASTnode中的风险：没给sonHead->preNode, sonTail->nxtNode 初始化，可能会导致非法地址访问，又找到并修改了一个内存bug<br>Help, Exit<br>用g++工具发现有内存泄漏的情况，最后发现是临时写的test_ASTnode.cpp最后没有VariableTable::EraseAllVars()，这也确实不合理，到时候应该把VariableTable弄成可以分离出来的对像自动析构<br>Equal，把If改了，数字不能看作布尔值了，只能是True或False<br>至此已经可以编程进行整数分解了|
+||20220325|ASTnode.h ASTnode.cpp<br>Functions.h Functions.cpp<br>Integer.h<br>Tools.h Tools.cpp|Sort<br>Plus, Times 中添加了自动排序|
 
 # 一些 mathematica 代码
 ```
@@ -489,6 +499,13 @@ In :=   Set[digits, Function[List[n],
         ]]
         fun[666233]
 
+In :=   Set[digits, Function[List[n, k],
+            If[Equal[n, 0], List[],
+                Flatten[List[ digits[Quotient[n, k], k], Mod[n, k] ]]
+            ]
+        ]]
+        digits[10, 2]
+
 In :=   Set[a, 1]; Equal[1, 1, 1, a]
 
 In :=   幂运算
@@ -525,5 +542,6 @@ In :=   幂运算
         分解
         SetDelayed[factors, Function[List[n], fac[n, 2]]]
 
+In :=   Plus[fun[2, 4], Times[a, d, b, 7], fun[1, 2], 7, a, 1, 2, b, a]
 
 ```

@@ -2,6 +2,7 @@
 #include "../include/Integer.h"
 #include "../include/Functions.h"
 #include "../include/Variable.h"
+#include "../include/Tools.h"
 #include <cstdio>
 #include <string>
 #include <map>
@@ -107,6 +108,9 @@ ASTnode *Compute(ASTnode *node)
             }
             if (funName == "Equal") {
                 return Equal(node);
+            }
+            if (funName == "Sort") {
+                return Sort(node);
             }
 
 
@@ -355,6 +359,11 @@ ASTnode *Plus(ASTnode *node)
     }
     
 
+
+    node = Tools_SortSons(node);    //20220325
+
+
+
     // 要是最后化简完只剩一项，那么就把那个儿子提出来，解构原节点并返回提出来的儿子节点
     // 要是剩下零项，说明消完了，创建一个单位元 0 返回。
     // 注意要保留住 pre/nxtNode 的信息
@@ -411,7 +420,6 @@ ASTnode *Times(ASTnode *node)
         }
     }
 
-
     // 合并同为整数的项
     Integer productInteger=Integer(1);
     Integer tmpInteger;
@@ -428,6 +436,11 @@ ASTnode *Times(ASTnode *node)
         AppendSon_move(node, tmp);
     }
     
+
+
+    node = Tools_SortSons(node);    //20220325
+
+
 
     // 要是最后化简完只剩一项，那么就把那个儿子提出来，解构原节点并返回提出来的儿子节点
     // 要是剩下零项，说明消完了，创建一个单位元 1 返回。
@@ -667,6 +680,23 @@ ASTnode *Flatten(ASTnode *node)
 }
 
 
+ASTnode *Sort(ASTnode *node)
+{
+    if (!node) return NULL;
+    node = ComputeSons(node);
+
+    // Sort[List]
+    if (node->nodeInfo->sonCnt == 1 && node->sonHead->nxtNode->nodeInfo->headName == "List") {
+        ASTnode *ret = UnmountSon(node, node->sonHead->nxtNode, node->preNode, node->nxtNode);
+        Destroy(node);
+        ret = Tools_SortSons(ret);
+        return ret;
+    }
+
+    return node;
+}
+
+
 /*=================================================================
   本地函数
 =================================================================*/
@@ -893,8 +923,9 @@ void PrintHelp()
     puts("List[expr1, expr2, ...]");
     puts("Function[List, expr]");
     puts("Apply[func, List]");
-    puts("If[judgeExpr, trueExpr, falseExpr]]");
+    puts("If[judgeExpr, trueExpr, falseExpr]");
     puts("Flatten[List]");
+    puts("Sort[List]");
     puts("Help[]");
     puts("Exit");
 }

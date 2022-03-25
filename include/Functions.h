@@ -41,4 +41,6 @@ ASTnode *If(ASTnode *node);
 
 ASTnode *Flatten(ASTnode *node);
 
+ASTnode *Sort(ASTnode *node);
+
 #endif

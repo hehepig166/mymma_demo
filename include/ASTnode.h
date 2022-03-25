@@ -1,6 +1,7 @@
 #ifndef HEHEPIG_MMA_ASTNODE
 #define HEHEPIG_MMA_ASTNODE
 
+#include "../include/Integer.h"
 #include <string>
 
 /*
@@ -10,18 +11,18 @@
     STRING: 字符串
 其它位用作更细分（但本质上只有这三种元素）
 */
-#define NODETYPEBITS                (0x0f)
-#define NODETYPE_NUMBER             (0x01)
-#define NODETYPE_SYMBOL             (0x02)
-#define NODETYPE_STRING             (0x04)
+#define NODETYPEBITS                (0xf0)
+#define NODETYPE_NUMBER             (0x10)
+#define NODETYPE_SYMBOL             (0x20)
+#define NODETYPE_STRING             (0x40)
 #define NODETYPE_NUMBER_INTEGER     (0x11)
-#define NODETYPE_NUMBER_RATIONAL    (0x21)
-#define NODETYPE_NUMBER_REAL        (0x31)
-#define NodeTYPE_NUMBER_COMPLEX     (0x41)
-#define NODETYPE_SYMBOL_VARNAME     (0x12)
+#define NODETYPE_NUMBER_RATIONAL    (0x12)
+#define NODETYPE_NUMBER_REAL        (0x13)
+#define NodeTYPE_NUMBER_COMPLEX     (0x14)
+#define NODETYPE_SYMBOL_VARNAME     (0x21)
 #define NODETYPE_SYMBOL_FUNCTION    (0x22)
-#define NODETYPE_SYMBOL_TRUE        (0x32)
-#define NODETYPE_SYMBOL_FALSE       (0x42)
+#define NODETYPE_SYMBOL_TRUE        (0x23)
+#define NODETYPE_SYMBOL_FALSE       (0x24)
 
 #define VALTYPE_NULL        (0)
 #define VALTYPE_INTEGER     (1)
@@ -40,12 +41,22 @@ struct ASTnodeInfo {
 
     int sonCnt;
     
-    std::string headName;
     int headID;
 
-    bool operator!=(const ASTnodeInfo &X) {
+    std::string headName;
+
+    const bool operator<(const ASTnodeInfo &X) {
+        if (nodeType != X.nodeType) return nodeType < X.nodeType;
+        if (valType != X.valType) return valType < X.valType;
+        if (sonCnt != X.sonCnt) return sonCnt < X.sonCnt;
+        if (headID != X.headID) return headID < X.headID;
+        if (headName != X.headName) return headName < X.headName;
+        return false;
+    }
+
+    const bool operator!=(const ASTnodeInfo &X) {
         return nodeType!=X.nodeType || valType!=X.valType || sonCnt!=X.sonCnt ||
-            headName!=X.headName || headID!=X.headID ;
+        headID!=X.headID || headName!=X.headName;
     }
 };
 
@@ -65,6 +76,17 @@ struct ASTnode {
     ASTnode *nxtNode;
 
     //~ASTnode();
+
+    const bool operator<(const ASTnode &X) {
+        if (*(nodeInfo) != *(X.nodeInfo)) return *(nodeInfo) < *(X.nodeInfo);
+        if (nodeInfo->valType == VALTYPE_INTEGER) {
+            return *((Integer*)(nodeVal)) < *((Integer*)(X.nodeVal));
+        }
+        if (nodeInfo->valType == VALTYPE_STRING) {
+            return *((std::string*)(nodeVal)) < *((std::string*)(X.nodeVal));
+        }
+        return false;
+    }
 };
 
 
