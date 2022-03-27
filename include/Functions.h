@@ -21,6 +21,10 @@ ASTnode *AtomQ(ASTnode *node);
 
 ASTnode *Equal(ASTnode *node);
 
+ASTnode *Less(ASTnode *node);
+
+ASTnode *Greater(ASTnode *node);
+
 
 ASTnode *Plus(ASTnode *node);
 

@@ -109,6 +109,12 @@ ASTnode *Compute(ASTnode *node)
             if (funName == "Equal") {
                 return Equal(node);
             }
+            if (funName == "Less") {
+                return Less(node);
+            }
+            if (funName == "Greater") {
+                return Greater(node);;
+            }
             if (funName == "Sort") {
                 return Sort(node);
             }
@@ -308,6 +314,88 @@ ASTnode *Equal(ASTnode *node)
     Destroy(node);    
     return mergeLR(ret);
 }
+
+
+ASTnode *Less(ASTnode *node)
+{
+    if (!node) return NULL;
+    int flag=1;
+    // 1: True
+    // 2: False
+    // 3: 保留
+
+    node = ComputeSons(node);
+
+    if (node->nodeInfo->sonCnt >= 2) {
+        for (ASTnode *p=node->sonHead->nxtNode; p->nxtNode!=node->sonTail; p=p->nxtNode) {
+            if (!_Comparable(p, p->nxtNode)) {
+                flag = 3;
+                break;
+            }
+            if (!(*p < *(p->nxtNode))) {
+                flag = 2;
+                break;
+            }
+        }
+    }
+
+    ASTnode *ret;
+    if (flag == 1) {
+        ret = CreateNode(NODETYPE_SYMBOL_TRUE, "Symbol", node->preNode, node->nxtNode);
+    }
+    else if (flag == 2) {
+        ret = CreateNode(NODETYPE_SYMBOL_FALSE, "Symbol", node->preNode, node->nxtNode);
+    }
+    else {
+        ret = node;
+        node = NULL;
+    }
+
+    Destroy(node);    
+    return mergeLR(ret);
+}
+
+ASTnode *Greater(ASTnode *node)
+{
+    if (!node) return NULL;
+    int flag=1;
+    // 1: True
+    // 2: False
+    // 3: 保留
+
+    node = ComputeSons(node);
+
+    if (node->nodeInfo->sonCnt >= 2) {
+        for (ASTnode *p=node->sonHead->nxtNode; p->nxtNode!=node->sonTail; p=p->nxtNode) {
+            if (!_Comparable(p, p->nxtNode)) {
+                flag = 3;
+                break;
+            }
+            if ((*p < *(p->nxtNode)) || *p == *(p->nxtNode)) {
+                flag = 2;
+                break;
+            }
+        }
+    }
+
+    ASTnode *ret;
+    if (flag == 1) {
+        ret = CreateNode(NODETYPE_SYMBOL_TRUE, "Symbol", node->preNode, node->nxtNode);
+    }
+    else if (flag == 2) {
+        ret = CreateNode(NODETYPE_SYMBOL_FALSE, "Symbol", node->preNode, node->nxtNode);
+    }
+    else {
+        ret = node;
+        node = NULL;
+    }
+
+    Destroy(node);    
+    return mergeLR(ret);
+}
+
+
+
 
 
 ASTnode *Plus(ASTnode *node)
@@ -551,7 +639,8 @@ ASTnode *Apply(ASTnode *node)
         int fail=0;
         ASTnode *nameList = s1->sonHead->nxtNode;
         ASTnode *valList = s2;
-        fail |= nameList->nodeInfo->sonCnt != valList->nodeInfo->sonCnt;
+        // 只要valList不比nameList短就行，多出来的话从前往后取需要的
+        fail |= nameList->nodeInfo->sonCnt > valList->nodeInfo->sonCnt;
 
         // 保存变量信息并替换变量
         std::map<std::string, ASTnode*> tmpVarMap;
@@ -686,10 +775,18 @@ ASTnode *Sort(ASTnode *node)
     node = ComputeSons(node);
 
     // Sort[List]
-    if (node->nodeInfo->sonCnt == 1 && node->sonHead->nxtNode->nodeInfo->headName == "List") {
+    if (node->nodeInfo->sonCnt == 1) {
         ASTnode *ret = UnmountSon(node, node->sonHead->nxtNode, node->preNode, node->nxtNode);
         Destroy(node);
         ret = Tools_SortSons(ret);
+        return ret;
+    }
+    else if (node->nodeInfo->sonCnt == 2) {
+        ASTnode *ret = UnmountSon(node, node->sonHead->nxtNode, node->preNode, node->nxtNode);
+        ASTnode *cmp = UnmountSon(node, node->sonHead->nxtNode, node->preNode, node->nxtNode);
+        Destroy(node);
+        ret = Tools_SortSons(ret, cmp);
+        Destroy(cmp);
         return ret;
     }
 
@@ -916,6 +1013,8 @@ void PrintHelp()
     puts("FullForm[expr]");
     puts("AtomQ[expr]");
     puts("Equal[expr1, expr2, ...]");
+    puts("Less[expr1, expr2, ...]");
+    puts("Greater[expr1, expr2, ...]");
     puts("Plus[expr1, expr2, ...]");
     puts("Times[expr1, expr2, ...]");
     puts("Quotient[divisor, dividend]");
@@ -926,6 +1025,7 @@ void PrintHelp()
     puts("If[judgeExpr, trueExpr, falseExpr]");
     puts("Flatten[List]");
     puts("Sort[List]");
+    puts("Sort[List, func]");
     puts("Help[]");
     puts("Exit");
 }

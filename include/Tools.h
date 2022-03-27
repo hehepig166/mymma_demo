@@ -15,7 +15,7 @@
 
 ASTnode *Tools_SortSons(ASTnode *node);
 
-
+ASTnode *Tools_SortSons(ASTnode *node, const ASTnode *cmpNode);
 
 
 #endif

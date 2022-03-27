@@ -342,9 +342,21 @@
         => True
     ```
 
+* Greater/Less
+    * 大于/小于
+    * `Greater[expr1, expr2, ...]`
+    * `Less[expr1, expr2, ...]`
+    * 返回 True、False、或保留原样（若不可比）
+    * 若不足两项，则为 True
+    ```
+    Less[1,2]
+    Greater[5,4,3,2,1]
+    Greater[5,4,3,5,1]
+    ```
+
 * Flatten
     * 展开
-    * Flatten[List]，将List完全展开
+    * `Flatten[List]`，将List完全展开
     * 说明：这只是 mathematica Flatten 的一部分
     ```
     Flatten[List[List[1], b, List[2,3,4], 6]]
@@ -356,11 +368,22 @@
 
 * Sort
     * 排序
-    * Sort[List]，排序List中的内容
+    * `Sort[List]`，排序List中的内容
+    * `Sort[List, func]`，sorts using the ordering function p. 
+    * 注意，其实不一定是List，任何头都可以。
     ```
     Sort[List[1, 5, 2, 4]]
     Sort[List[a, b, fun[d, e], fun[a, b], x, 1, 2]]
     Sort[List[fun[2, 4], Times[a, d, b, 7], fun[1, 2], 7, a, 1, 2, b, a]]
+
+    Sort[List[1, 5, 2, 4], Greater]
+        => List[5, 4, 2, 1]
+    
+    Sort[a[1, 5, 3]]
+        => a[1, 3, 5]
+    
+    Sort[{4, 3, 1, 7, 9}, # > 3 &]
+        => {4, 7, 9, 1, 3}
     ```
 
 * Exit[]
@@ -406,6 +429,7 @@
 ||20220318|Functions.cpp Functions.h <br> Integer.h|Quotient, Mod|
 ||20220319|Functions.cpp Functions.h <br> ASTnode.cpp|Flatten<br>在测试 `Flatten[List[List[]]]`时发现了CreateASTnode中的风险：没给sonHead->preNode, sonTail->nxtNode 初始化，可能会导致非法地址访问，又找到并修改了一个内存bug<br>Help, Exit<br>用g++工具发现有内存泄漏的情况，最后发现是临时写的test_ASTnode.cpp最后没有VariableTable::EraseAllVars()，这也确实不合理，到时候应该把VariableTable弄成可以分离出来的对像自动析构<br>Equal，把If改了，数字不能看作布尔值了，只能是True或False<br>至此已经可以编程进行整数分解了|
 ||20220325|ASTnode.h ASTnode.cpp<br>Functions.h Functions.cpp<br>Integer.h<br>Tools.h Tools.cpp|Sort<br>Plus, Times 中添加了自动排序|
+||20220327|Functions.h Functions.cpp<br>Tools.h Tools.cpp|Sort 添加了自定义排序（两参<br>Less/Greater<br>调整了一下Apply，使得调用函数时提供的参数数量可以大于函数所需的参数数量，若大于，函数从前往后依次仅取需要的，后面的不管|
 
 # 一些 mathematica 代码
 ```
@@ -542,6 +566,27 @@ In :=   幂运算
         分解
         SetDelayed[factors, Function[List[n], fac[n, 2]]]
 
-In :=   Plus[fun[2, 4], Times[a, d, b, 7], fun[1, 2], 7, a, 1, 2, b, a]
+In :=   Plus[a, b, Plus[f, h, a], Times[6, b], 5, 3, d, a, f1[x], f2[y], f1[z], f1[x], f1[1]]
+
+In :=   SetDelayed[f, Function[List[x], Greater[x, 3]]]
+        Sort[List[1, 6, 3, 4, 2, 8], f]
+
+In :=   SetDelayed[g, Function[List[x,y], Greater[x, 3]]]
+        Sort[List[1, 6, 3, 4, 2, 8], f]
+
+In :=   SetDelayed[f, Function[List[x], Greater[x,3]]]
+        f[5]
+        f[5,2]
+        f[2,5]
+
+按数位和排序
+In :=   SetDelayed[digits, Function[List[n],
+            If[Equal[n, 0], List[],
+                Flatten[List[ digits[Quotient[n, 10]], Mod[n, 10] ]]
+            ]
+        ]]
+        SetDelayed[digitSum, Function[List[n], Apply[Plus, digits[n]]]]
+        SetDelayed[cmp, Function[List[n1,n2],Less[digitSum[n1],digitSum[n2]]]]
+        Sort[List[1,2,3,10,100,5,6,7,8,321,4,124,142,4124,643,234,43,764536], cmp]
 
 ```
