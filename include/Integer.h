@@ -14,6 +14,9 @@ struct Integer {
         printf("%d",val);
     }
 
+    Integer operator&(const Integer &x) {return Integer(val&x.val);}
+
+    void operator>>=(const Integer &x) {val>>=x.val;}
     void operator+=(const Integer &x) {val+=x.val;}
     void operator*=(const Integer &x) {val*=x.val;}
     void operator/=(const Integer &x) {val/=x.val;}

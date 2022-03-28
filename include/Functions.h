@@ -30,9 +30,13 @@ ASTnode *Plus(ASTnode *node);
 
 ASTnode *Times(ASTnode *node);
 
+ASTnode *Power(ASTnode *node);
+
 ASTnode *Quotient(ASTnode *node);
 
-ASTnode *Mod(ASTnode *Mod);
+ASTnode *Mod(ASTnode *node);
+
+ASTnode *Divide(ASTnode *node);
 
 
 ASTnode *List(ASTnode *node);

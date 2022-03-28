@@ -187,7 +187,7 @@ int main()
 */
 
         root = Compute(root);
-        printf("Out//FullForm = ");
+        printf("Out = ");
         Print(root);
         puts("\n");
 

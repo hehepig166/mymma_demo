@@ -410,8 +410,16 @@
         * 计算并保存答案（由于符号计算的特性，这时只需要Compute一下Function的expr即可）
         * 恢复变量信息
 
-
-
+* 20220328
+    * 关于 Power：
+        为了处理 `Times[a, Power[a, -1]]` 的情况，在 Times 里，先默认都给东西加上 Power[#,1]，再合并同类项
+        部分参考了 mathematica 的文档
+        * `(a b)^c` is automatically converted to `a^c b^c` only if c is an integer. 
+        * `(a^b)^c` is automatically converted to `a^(b c)` only if c is an integer. 
+        * `Power[x,y,z,...]]` is taken to be `Power[x,Power[y,z,...]]]`.
+        * `X^0` = 1
+        * `X^1` = X
+        * Integer ^ Integer ，则直接算
 
 
 # 999. 日志
@@ -430,6 +438,7 @@
 ||20220319|Functions.cpp Functions.h <br> ASTnode.cpp|Flatten<br>在测试 `Flatten[List[List[]]]`时发现了CreateASTnode中的风险：没给sonHead->preNode, sonTail->nxtNode 初始化，可能会导致非法地址访问，又找到并修改了一个内存bug<br>Help, Exit<br>用g++工具发现有内存泄漏的情况，最后发现是临时写的test_ASTnode.cpp最后没有VariableTable::EraseAllVars()，这也确实不合理，到时候应该把VariableTable弄成可以分离出来的对像自动析构<br>Equal，把If改了，数字不能看作布尔值了，只能是True或False<br>至此已经可以编程进行整数分解了|
 ||20220325|ASTnode.h ASTnode.cpp<br>Functions.h Functions.cpp<br>Integer.h<br>Tools.h Tools.cpp|Sort<br>Plus, Times 中添加了自动排序|
 ||20220327|Functions.h Functions.cpp<br>Tools.h Tools.cpp|Sort 添加了自定义排序（两参<br>Less/Greater<br>调整了一下Apply，使得调用函数时提供的参数数量可以大于函数所需的参数数量，若大于，函数从前往后依次仅取需要的，后面的不管|
+||20220328|Functions.h Functions.cpp<br>Integer.h|Power，相应的改了Times<br>Divide|
 
 # 一些 mathematica 代码
 ```
@@ -589,4 +598,20 @@ In :=   SetDelayed[digits, Function[List[n],
         SetDelayed[cmp, Function[List[n1,n2],Less[digitSum[n1],digitSum[n2]]]]
         Sort[List[1,2,3,10,100,5,6,7,8,321,4,124,142,4124,643,234,43,764536], cmp]
 
+In :=   Times[b, Power[Times[c, d], -1]] // FullForm
+        Divide[b, Times[c, d]] // FullForm
+
+In :=   Times[a, Power[Times[b, Power[Times[c, d], -1]], -1]] // FullForm
+        Divide[a, Divide[b, Times[c, d]]] // FullForm
+
+In :=   Power[Times[Power[a,b,c],d,e],Power[f,g]]
+        Power[Times[Power[a,b,c],d,e],5]
+        Power[Power[a, Power[b, c]], 5]
+
+In :=   Power[Times[1,-5], 5]
+
+In :=   Times[Power[Times[a, b], -2], Power[Times[b, c], -1], b, c, Times[b, b]]
+
+In :=   Divide[Times[2,5,6], Power[2, -1]]
+        Divide[Times[a,b,c], Power[d, -2]]
 ```

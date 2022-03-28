@@ -10,6 +10,7 @@
 
 static Integer ZERO_INTEGER = Integer(0);
 static Integer ONE_INTEGER = Integer(1);
+static Integer NEG_ONE_INTEGER = Integer(-1);
 
 /*=================================================================
   局部工具函数以及变量
@@ -79,6 +80,9 @@ ASTnode *Compute(ASTnode *node)
             if (funName == "Plus") {
                 return Plus(node);
             }
+            if (funName == "Power") {
+                return Power(node);
+            }
             if (funName == "Set") {
                 return Set(node);
             }
@@ -90,6 +94,9 @@ ASTnode *Compute(ASTnode *node)
             }
             if (funName == "Mod") {
                 return Mod(node);
+            }
+            if (funName == "Divide") {
+                return Divide(node);
             }
             if (funName == "SetDelayed") {
                 return SetDelayed(node);
@@ -556,6 +563,107 @@ ASTnode *Times(ASTnode *node)
 }
 
 
+ASTnode *Power(ASTnode *node)
+{
+    if (!node) return NULL;
+
+    node = ComputeSons(node);
+
+    // 若没参数，返回 Integer 1
+    if (node->nodeInfo->sonCnt == 0) {
+        ASTnode *ret = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", node->preNode, node->nxtNode);
+        Destroy(node);
+        SetNodeVal(ret, VALTYPE_INTEGER, &ONE_INTEGER);
+        return mergeLR(ret);
+    }
+
+    // 若只有一个参数，返回这个参数
+    if (node->nodeInfo->sonCnt == 1) {
+        ASTnode *ret = UnmountSon(node, node->sonHead->nxtNode, node->preNode, node->nxtNode);
+        Destroy(node);
+        return mergeLR(ret);
+    }
+
+    // 若大于两个参数，递归
+    // Power[x,y,z,...] = Power[x, Power[y, z, ...]]
+    if (node->nodeInfo->sonCnt > 2) {
+        ASTnode *ret = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Power", node->preNode, node->nxtNode);
+        AppendSon_move(ret, UnmountSon(node, GetSon(node, 1), NULL, NULL));
+        AppendSon_move(ret, Compute(node));
+        return mergeLR(Compute(ret));
+    }
+
+    // 以下保证了两个参数
+
+    ASTnode *pExp = node->sonHead->nxtNode->nxtNode;
+    
+    // 要是指数不是Integer，则保持原样返回
+    if (pExp->nodeInfo->nodeType != NODETYPE_NUMBER_INTEGER) {
+        return mergeLR(node);
+    }
+
+    // 以下前提 “指数是 Integer ”
+
+    // X^0 = 1
+    if (*((Integer*)(pExp->nodeVal)) == ZERO_INTEGER) {
+        ASTnode *ret = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", node->preNode, node->nxtNode);
+        Destroy(node);
+        SetNodeVal(ret, VALTYPE_INTEGER, &ONE_INTEGER);
+        return mergeLR(ret);
+    }
+
+    // X^1 = X
+    if (*((Integer*)(pExp->nodeVal)) == ONE_INTEGER) {
+        ASTnode *ret = UnmountSon(node, GetSon(node, 1), node->preNode, node->nxtNode);
+        Destroy(node);
+        return mergeLR(ret);
+    }
+
+    // 底数是Integer，指数为非负整数，可计算
+    if (ZERO_INTEGER<*((Integer*)(pExp->nodeVal)) && node->sonHead->nxtNode->nodeInfo->nodeType == NODETYPE_NUMBER_INTEGER) {
+        Integer x = *((Integer*)(node->sonHead->nxtNode->nodeVal));
+        Integer k = *((Integer*)(pExp->nodeVal));
+        Integer ans = ONE_INTEGER;
+        while (ZERO_INTEGER < k) {
+            if ((k&ONE_INTEGER) == ONE_INTEGER)
+                ans*=x;
+            k>>=ONE_INTEGER;
+            x*=x;
+        }
+        ASTnode *ret = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", node->preNode, node->nxtNode);
+        SetNodeVal(ret, VALTYPE_INTEGER, &ans);
+        Destroy(node);
+        return mergeLR(ret);
+    }
+
+    // (a*b*c)^e = a^e * b^e * c^e
+    if (node->sonHead->nxtNode->nodeInfo->headName == "Times") {
+        ASTnode *ret = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Times", node->preNode, node->nxtNode);
+        ASTnode *p = node->sonHead->nxtNode;
+        while (p->nodeInfo->sonCnt) {
+            ASTnode *tmp = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Power", NULL, NULL);
+            AppendSon_move(tmp, UnmountSon(p, p->sonHead->nxtNode, NULL, NULL));
+            AppendSon_move(tmp, Duplicate(pExp, NULL, NULL));
+            AppendSon_move(ret, tmp);
+        }
+        Destroy(node);
+        return Times(ret);
+    }
+
+    // (a^b)^c = a^(b*c)
+    if (node->sonHead->nxtNode->nodeInfo->headName == "Power") {
+        ASTnode *tmpExp = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Times", NULL, NULL);
+        AppendSon_move(tmpExp, UnmountSon(GetSon(node, 1), GetSon(GetSon(node, 1), 2), NULL, NULL));
+        AppendSon_move(tmpExp, UnmountSon(node, GetSon(node, 2), NULL, NULL));
+        AppendSon_move(node, tmpExp);
+        return Compute(node);
+    }
+
+    return node;
+}
+
+
+
 ASTnode *Quotient(ASTnode *node)
 {
     if (!node) {return NULL;}
@@ -609,6 +717,34 @@ ASTnode *Mod(ASTnode *node)
 
     return mergeLR(ret);
 }
+
+
+ASTnode *Divide(ASTnode *node)
+{
+    if (!node) return NULL;
+
+    // 只接收两个参数，否则报错
+    if (node->nodeInfo->sonCnt != 2) {
+        printf("Err: wrong sonCnt<%d> in Divide, must be 2.\n", node->nodeInfo->sonCnt);
+        return node;
+    }
+
+    // a/b => a*(b^-1)
+    ASTnode *ret = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Times", node->preNode, node->nxtNode);
+    AppendSon_move(ret, UnmountSon(node, GetSon(node, 1), NULL, NULL));
+    ASTnode *tmp = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Power", NULL, NULL);
+    AppendSon_move(tmp, UnmountSon(node, GetSon(node, 1), NULL, NULL));
+    ASTnode *tmpn1 = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", NULL, NULL);
+    SetNodeVal(tmpn1, VALTYPE_INTEGER, &NEG_ONE_INTEGER);
+    AppendSon_move(tmp, tmpn1);
+    AppendSon_move(ret, tmp);
+    Destroy(node);
+
+
+    ret = Compute(ret);
+    return ret;
+}
+
 
 
 ASTnode *Function(ASTnode *node)
@@ -1017,8 +1153,10 @@ void PrintHelp()
     puts("Greater[expr1, expr2, ...]");
     puts("Plus[expr1, expr2, ...]");
     puts("Times[expr1, expr2, ...]");
+    puts("Power[expr1, expr2, ...]");
     puts("Quotient[divisor, dividend]");
     puts("Mod[divisor, dividend]");
+    puts("Divide[divisor, dividend]");
     puts("List[expr1, expr2, ...]");
     puts("Function[List, expr]");
     puts("Apply[func, List]");
