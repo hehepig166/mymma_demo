@@ -412,7 +412,6 @@
 
 * 20220328
     * 关于 Power：
-        为了处理 `Times[a, Power[a, -1]]` 的情况，在 Times 里，先默认都给东西加上 Power[#,1]，再合并同类项
         部分参考了 mathematica 的文档
         * `(a b)^c` is automatically converted to `a^c b^c` only if c is an integer. 
         * `(a^b)^c` is automatically converted to `a^(b c)` only if c is an integer. 
@@ -420,6 +419,10 @@
         * `X^0` = 1
         * `X^1` = X
         * Integer ^ Integer ，则直接算
+
+* 20220329
+    * 关于 Times 与 Power：
+        为了处理 `Times[a, Power[a, -1]]` 的情况，在 Times 里，先默认都给东西加上 Power[#,1]，再合并同类项
 
 
 # 999. 日志
@@ -439,6 +442,7 @@
 ||20220325|ASTnode.h ASTnode.cpp<br>Functions.h Functions.cpp<br>Integer.h<br>Tools.h Tools.cpp|Sort<br>Plus, Times 中添加了自动排序|
 ||20220327|Functions.h Functions.cpp<br>Tools.h Tools.cpp|Sort 添加了自定义排序（两参<br>Less/Greater<br>调整了一下Apply，使得调用函数时提供的参数数量可以大于函数所需的参数数量，若大于，函数从前往后依次仅取需要的，后面的不管|
 ||20220328|Functions.h Functions.cpp<br>Integer.h|Power，相应的改了Times<br>Divide|
+||20220329|Functions.h Functions.cpp|Times，能将相同项合并为Power，相同底数的Power能合并|
 
 # 一些 mathematica 代码
 ```
@@ -614,4 +618,11 @@ In :=   Times[Power[Times[a, b], -2], Power[Times[b, c], -1], b, c, Times[b, b]]
 
 In :=   Divide[Times[2,5,6], Power[2, -1]]
         Divide[Times[a,b,c], Power[d, -2]]
+
+In :=   Times[a, Times[1,7,b,5], Power[a,5], b]
+        Times[a, a, Power[a, Plus[f, 6]], Power[Times[a, b], -7], Divide[6, 4]]
+        Times[Power[7, 5], Divide[Power[a, 2], 7], Divide[2, 7]]
+        Divide[Power[a, 7], Power[Times[a, b, 6], Times[Plus[g[5], 2]]]]
+        Divide[Power[a, 7], Power[Times[a, b, 6], Plus[2, 9]]]
+        Times[Power[Times[a, b], -2], Power[Times[b, c, d], -1], b, c, Times[b, b]]
 ```

@@ -515,6 +515,46 @@ ASTnode *Times(ASTnode *node)
         }
     }
 
+
+
+    // 20220329
+    /* 把不是Power的套一个Power[#, 1]&，再合并底数相同的 */
+    // 套Power
+    for (ASTnode *p = node->sonHead->nxtNode; p!=node->sonTail; p=p->nxtNode) {
+        if (p->nodeInfo->headName != "Power") {
+            ASTnode *pre = p->preNode;
+            p = UnmountSon(node, p, NULL, NULL);
+            ASTnode *tmp = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Power", NULL, NULL);
+            AppendSon_move(tmp, p);
+            ASTnode *tmpOne = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", NULL, NULL);
+            SetNodeVal(tmpOne, VALTYPE_INTEGER, &ONE_INTEGER);
+            AppendSon_move(tmp, tmpOne);
+            p = InsertSon_move(node, tmp, pre);
+        }
+    }
+
+    // 排序，让底数相同的在一起
+    node = Tools_SortSons(node);
+    // 合并底数相同的
+    for (ASTnode *p = node->sonHead->nxtNode; p!=node->sonTail && p->nxtNode!=node->sonTail; p=p->nxtNode) {
+        ASTnode *nxt = p->nxtNode;
+        if (*(GetSon(p, 1)) == *(GetSon(nxt, 1))) {
+            ASTnode *tmpPlus = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Plus", NULL, NULL);
+            AppendSon_move(tmpPlus, UnmountSon(p, p->sonHead->nxtNode->nxtNode, NULL, NULL));
+            while (nxt != node->sonTail && (*(GetSon(p, 1)) == *(GetSon(nxt, 1)))) {
+                ASTnode *tmp = nxt->nxtNode;
+                nxt = UnmountSon(node, nxt, NULL, NULL);
+                AppendSon_move(tmpPlus, UnmountSon(nxt, GetSon(nxt, 2), NULL, NULL));
+                Destroy(nxt);
+                nxt = tmp;
+            }
+            AppendSon_move(p, tmpPlus);
+        }
+        p = Compute(p);
+    }
+    node = ComputeSons(node);
+    
+
     // 合并同为整数的项
     Integer productInteger=Integer(1);
     Integer tmpInteger;
@@ -530,10 +570,9 @@ ASTnode *Times(ASTnode *node)
         SetNodeVal(tmp, VALTYPE_INTEGER, &productInteger);
         AppendSon_move(node, tmp);
     }
-    
 
 
-    node = Tools_SortSons(node);    //20220325
+    //node = Tools_SortSons(node);    //20220325
 
 
 
