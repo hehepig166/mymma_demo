@@ -443,6 +443,7 @@
 ||20220327|Functions.h Functions.cpp<br>Tools.h Tools.cpp|Sort 添加了自定义排序（两参<br>Less/Greater<br>调整了一下Apply，使得调用函数时提供的参数数量可以大于函数所需的参数数量，若大于，函数从前往后依次仅取需要的，后面的不管|
 ||20220328|Functions.h Functions.cpp<br>Integer.h|Power，相应的改了Times<br>Divide|
 ||20220329|Functions.h Functions.cpp|Times，能将相同项合并为Power，相同底数的Power能合并|
+||20220330|Functions.h Functions.cpp<br>test_Driver.cpp<br>Varable.cpp|Subtract<br>简易的语法分析<br>发现一个VariableTable::SetVarNode的小bug，就是它没处理node是NULL的情形，补好了|
 
 # 一些 mathematica 代码
 ```
@@ -625,4 +626,49 @@ In :=   Times[a, Times[1,7,b,5], Power[a,5], b]
         Divide[Power[a, 7], Power[Times[a, b, 6], Times[Plus[g[5], 2]]]]
         Divide[Power[a, 7], Power[Times[a, b, 6], Plus[2, 9]]]
         Times[Power[Times[a, b], -2], Power[Times[b, c, d], -1], b, c, Times[b, b]]
+
+20220330
+In :=   a/b*c
+        a^b^c^d
+        a+b*c^d^(e-f)/g+18-(6+f[16])
+        5-3
+        a^b*c
+        a/b*c/d/e
+        a/b/c/d
+        (a/b)/(c/d)
+        a+(b+(c+(d-e+f)))
+        (a+b)/((c+d)/(e/f))
+        a-b^c/z
+        a^b-c/d^e/f
+        a=1
+        {}
+        {1,2,a,fun[{1,2}]}
+        {1,10817, 1926, 114, 514, fun[{1,2}], 3}
+        斐波那契数列 = fib := Function[{n},
+            If[n<3, 1, fib[n-1]+fib[n-2]]
+        ]
+
+        getm := Function[ {n, k},
+            If[Mod[n, k] == 0,
+                1+getm[Quotient[n, k], k],
+            0]
+        ]
+
+        fac := Function[ {n, k},
+            If[ n<2, {},
+                If[ n==k, g[k, 1],
+                    If[ (tmp=getm[n, k]) == 0,
+                        fac[Quotient[n, k^tmp], k+1],
+                        Flatten[{g[k, tmp], fac[Quotient[n, k^tmp], k+1]}]
+                    ]
+                ]
+            ]
+        ]
+
+        因式分解 = Function[{n}, fac[n, 2]]
+
+        powerN = Function[{n}, Function[{x}, x^n]]
+        powerN[3][5]
+        Function[{n}, Function[{x}, x^n]][2]
+
 ```

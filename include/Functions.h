@@ -38,6 +38,8 @@ ASTnode *Mod(ASTnode *node);
 
 ASTnode *Divide(ASTnode *node);
 
+ASTnode *Subtract(ASTnode *node);
+
 
 ASTnode *List(ASTnode *node);
 

@@ -98,6 +98,9 @@ ASTnode *Compute(ASTnode *node)
             if (funName == "Divide") {
                 return Divide(node);
             }
+            if (funName == "Subtract") {
+                return Subtract(node);
+            }
             if (funName == "SetDelayed") {
                 return SetDelayed(node);
             }
@@ -572,7 +575,7 @@ ASTnode *Times(ASTnode *node)
     }
 
 
-    //node = Tools_SortSons(node);    //20220325
+    node = Tools_SortSons(node);    //20220325
 
 
 
@@ -785,10 +788,77 @@ ASTnode *Divide(ASTnode *node)
 }
 
 
+ASTnode *Subtract(ASTnode *node)
+{
+    if (!node) return NULL;
+
+    // 只接收两个参数，否则报错
+    if (node->nodeInfo->sonCnt != 2) {
+        printf("Err: wrong sonCnt<%d> in Subtract, must be 2.\n", node->nodeInfo->sonCnt);
+        return node;
+    }
+
+    // a/b => a*(b^-1)
+    ASTnode *ret = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Plus", node->preNode, node->nxtNode);
+    AppendSon_move(ret, UnmountSon(node, GetSon(node, 1), NULL, NULL));
+    ASTnode *tmp = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Times", NULL, NULL);
+    AppendSon_move(tmp, UnmountSon(node, GetSon(node, 1), NULL, NULL));
+    ASTnode *tmpn1 = CreateNode(NODETYPE_NUMBER_INTEGER, "Integer", NULL, NULL);
+    SetNodeVal(tmpn1, VALTYPE_INTEGER, &NEG_ONE_INTEGER);
+    AppendSon_move(tmp, tmpn1);
+    AppendSon_move(ret, tmp);
+    Destroy(node);
+
+
+    ret = Compute(ret);
+    return ret;
+}
+
+
 
 ASTnode *Function(ASTnode *node)
 {
-    return node;
+    if (!node) {return NULL;}
+    if (!CheckFunction(node)) return node;
+
+    ASTnode *nameList = node->sonHead->nxtNode;
+    ASTnode *expr = nameList->nxtNode;
+    std::map<std::string, ASTnode*> tmpVarMap;
+    int fail=0;
+    for (ASTnode *p = nameList->sonHead->nxtNode; !fail && p!=nameList->sonTail; p=p->nxtNode) {
+        if (p->nodeInfo->nodeType == NODETYPE_SYMBOL_VARNAME) {
+            std::string str = *((std::string*)(p->nodeVal));
+            if (tmpVarMap.find(str)==tmpVarMap.end()) {
+                tmpVarMap[str]=Duplicate(VariableTable::FindVarNode(str), NULL, NULL);
+                VariableTable::SetVarNode(str, NULL);
+            }
+            else {  //说明有重复变量
+                printf("err: same var %s in Function\n", str.c_str());
+                fail=1;
+            }
+        }
+        else {
+            fail =1;
+            break;
+        }
+    }
+
+    if (!fail) {
+        expr = mergeLR(Compute(expr));
+    }
+
+    std::map<std::string, ASTnode*>::iterator iter;
+    for (iter = tmpVarMap.begin(); iter!=tmpVarMap.end(); iter++) {
+        if (iter->second) {
+            VariableTable::SetVarNode(iter->first, iter->second);
+            Destroy(iter->second);
+        }
+        else {
+            VariableTable::EraseVar(iter->first);
+        }
+    }
+    
+    return mergeLR(node);
 }
 
 
@@ -1196,6 +1266,7 @@ void PrintHelp()
     puts("Quotient[divisor, dividend]");
     puts("Mod[divisor, dividend]");
     puts("Divide[divisor, dividend]");
+    puts("Subtract[a, b]");
     puts("List[expr1, expr2, ...]");
     puts("Function[List, expr]");
     puts("Apply[func, List]");

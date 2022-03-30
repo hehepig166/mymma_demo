@@ -7,6 +7,10 @@ static std::map<std::string, ASTnode*> varMap;
 
     void VariableTable::SetVarNode(const std::string &varName_, const ASTnode *node)
     {
+        if (!node) {
+            varMap[varName_]=NULL;
+            return;
+        }
 
         // 处理 a=a 的情况，这时候不用做任何操作直接return
         if (
