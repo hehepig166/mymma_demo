@@ -1,6 +1,5 @@
 # My Mathematica
 
-
 # 1. 理念
 
 ## 1.1 符号计算
@@ -268,6 +267,7 @@
     * `Apply[fun, expr]`，代表用 fun 代替 List 语法树的头。
     * `Apply[PureFunction, List]`，代表用 List 作为 PureFunction 的参数，返回算出的值。
     * mathematica 中这个也有好多东西，也先弄个弱小版的。
+    * 20220331: 意识到这应该不太对……函数的调用因该用rules或者类似ReplaceAll这种来实现
     ```
     Apply[Plus, f[a, b]]
         => Plus[a, b]
@@ -386,6 +386,73 @@
         => {4, 7, 9, 1, 3}
     ```
 
+* Rule
+    * 代表一个替换规则，单独存在时似乎没有意义，需要和其他函数配合使用。
+    * `Rule[LHS, RHS]`，代表将 LHS 替换为 RHS
+    * 两边都会先运算一遍
+    * `LHS -> RHS`
+    ```
+    Rule[a, b]
+        => Rule[a, b]
+    a=10; b=15
+    Rule[a, b]
+        => Rule[10, 15]
+    Rule[a+b, c]
+        => Rula[15, c]
+    ```
+
+* RuleDelayed
+    * 类似Rule，但两边不运算先。
+    * `LHS :> RHS`
+    ```
+    Rule[a, b]
+        => Rule[a, b]
+    a=10; b=15
+    Rule[a, b]
+        => Rule[a, b]
+    Rule[a+b, c]
+        => Rula[a+b, c]
+    ```
+
+* Replace
+    * applies a rule or list of rules in an attempt to transform the entire expression expr. 
+    * `Replace[expr, rules]`
+    * 只判断整个表达式
+    ```
+    Replace[a+b, a+b->c]
+        => c
+    Replace[a+b+c, a+b->d]
+        => a+b+c
+    ```
+
+* ReplaceAll
+    * applies a rule or list of rules in an attempt to transform each subpart of an expression expr. 
+    * `ReplaceAll[expr, rules]`
+    * `expr /. rules`
+    * 注意这个只会替换一次，先查找，再把要替换的替换掉，若有冲突，在前面的优先
+    ```
+    ReplaceAll[a+b+c, a+c->d]
+        => b+d
+
+    ReplaceAll[a + b + c, {a + c -> d, a -> x}]
+        => b+d
+    
+    {a, b, c} /. List -> f
+        => f[a,b,c]
+    
+    ReplaceAll[a + b + c, {a :> x, a :> c -> d}]
+        => b+c+x
+    
+    ReplaceAll[a + b + c, {a -> x, a + c -> d}]
+        => b+d
+    ```
+
+* ReplaceRepeated
+    * repeatedly performs replacements until expr no longer changes. 
+    * `ReplaceRepeated[expr, rules]`
+    * `expr //. rules`
+    * 相当于多次调用 ReplaceAll 直到不变。注意可能会死循环
+
 * Exit[]
     * 退出
 
@@ -424,6 +491,10 @@
     * 关于 Times 与 Power：
         为了处理 `Times[a, Power[a, -1]]` 的情况，在 Times 里，先默认都给东西加上 Power[#,1]，再合并同类项
 
+* 20220331
+    * 关于 Rules：
+        初步准备用一个数据结构来代表一个 Rule 或一组 List。（类似 Map 那样）
+
 
 # 999. 日志
 |编号|日期|涉及文件|说明|
@@ -444,6 +515,7 @@
 ||20220328|Functions.h Functions.cpp<br>Integer.h|Power，相应的改了Times<br>Divide|
 ||20220329|Functions.h Functions.cpp|Times，能将相同项合并为Power，相同底数的Power能合并|
 ||20220330|Functions.h Functions.cpp<br>test_Driver.cpp<br>Varable.cpp|Subtract<br>简易的语法分析<br>发现一个VariableTable::SetVarNode的小bug，就是它没处理node是NULL的情形，补好了|
+||20220331|Variable.h Variable.cpp<br>Functions.cpp|改了改VariableTable，让他可以实例化，并为全局提供一个 GlobalVariableTable，可以实例化是为了以后的 Replace 等操作做准备|
 
 # 一些 mathematica 代码
 ```
@@ -665,7 +737,7 @@ In :=   a/b*c
             ]
         ]
 
-        因式分解 = Function[{n}, fac[n, 2]]
+        factors = 因式分解 = Function[{n}, fac[n, 2]]
 
         powerN = Function[{n}, Function[{x}, x^n]]
         powerN[3][5]

@@ -3,7 +3,7 @@
 #include <string>
 #include <map>
 
-static std::map<std::string, ASTnode*> varMap;
+VariableTable globalVariableTable = VariableTable();
 
     void VariableTable::SetVarNode(const std::string &varName_, const ASTnode *node)
     {

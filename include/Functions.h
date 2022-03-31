@@ -16,6 +16,8 @@ ASTnode *SetDelayed(ASTnode *node);
 ASTnode *FullForm(ASTnode *node);
 
 
+//ASTnode *Replace(ASTnode *node);
+
 
 ASTnode *AtomQ(ASTnode *node);
 

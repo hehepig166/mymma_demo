@@ -7,6 +7,7 @@
 #include <cstring>
 #include <map>
 
+extern VariableTable globalVariableTable;
 
 static Integer ZERO_INTEGER = Integer(0);
 static Integer ONE_INTEGER = Integer(1);
@@ -38,7 +39,7 @@ int GetNextToken()
     SkipSpace();
 
     // enter
-    if (nxtch == '\n') {
+    if (nxtch == '\n' || nxtch == ';') {
         nxtch = ' ';
         return CurTok = TOKEN_ENTER;
     }
@@ -429,7 +430,7 @@ int main()
         }
     }
     Destroy(doneNode);
-    VariableTable::EraseAllVars();
+    globalVariableTable.EraseAllVars();
     return 0;
 }
 

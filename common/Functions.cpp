@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 
+extern VariableTable globalVariableTable;
 
 static Integer ZERO_INTEGER = Integer(0);
 static Integer ONE_INTEGER = Integer(1);
@@ -134,7 +135,7 @@ ASTnode *Compute(ASTnode *node)
                 PrintHelp();
             }
 
-            if (VariableTable::FindVarNode(node->nodeInfo->headName)) {
+            if (globalVariableTable.FindVarNode(node->nodeInfo->headName)) {
                 ASTnode *nodeApply = CreateNode(NODETYPE_SYMBOL_FUNCTION, "Apply", node->preNode, node->nxtNode);
                 ASTnode *nodeHead = CreateNode(NODETYPE_SYMBOL_VARNAME, "Symbol", NULL, NULL);
                 SetNodeVal(nodeHead, VALTYPE_STRING, &(node->nodeInfo->headName));
@@ -151,7 +152,7 @@ ASTnode *Compute(ASTnode *node)
         }
         case NODETYPE_SYMBOL_VARNAME: {
             // 临时性的代码
-            ASTnode *tmp = VariableTable::FindVarNode(*((std::string*)(node->nodeVal)));
+            ASTnode *tmp = globalVariableTable.FindVarNode(*((std::string*)(node->nodeVal)));
             if (!tmp) {
                 return node;
             }
@@ -201,7 +202,7 @@ ASTnode *Set(ASTnode *node)
 
     // 检验通过，修改变量表
     // string varName = *((std::string)(LHS->nodeVal))
-    VariableTable::SetVarNode(varName, RHS);
+    globalVariableTable.SetVarNode(varName, RHS);
 
     // 重要！！解构原节点
     Destroy(node);
@@ -238,7 +239,7 @@ ASTnode *SetDelayed(ASTnode *node)
 
     // 检验通过，修改变量表
     // string varName = *((std::string)(LHS->nodeVal))
-    VariableTable::SetVarNode(varName, RHS);
+    globalVariableTable.SetVarNode(varName, RHS);
 
     // 重要！！解构原节点
     Destroy(node);
@@ -818,6 +819,7 @@ ASTnode *Subtract(ASTnode *node)
 
 ASTnode *Function(ASTnode *node)
 {
+    /*
     if (!node) {return NULL;}
     if (!CheckFunction(node)) return node;
 
@@ -829,8 +831,8 @@ ASTnode *Function(ASTnode *node)
         if (p->nodeInfo->nodeType == NODETYPE_SYMBOL_VARNAME) {
             std::string str = *((std::string*)(p->nodeVal));
             if (tmpVarMap.find(str)==tmpVarMap.end()) {
-                tmpVarMap[str]=Duplicate(VariableTable::FindVarNode(str), NULL, NULL);
-                VariableTable::SetVarNode(str, NULL);
+                tmpVarMap[str]=Duplicate(globalVariableTable.FindVarNode(str), NULL, NULL);
+                globalVariableTable.SetVarNode(str, NULL);
             }
             else {  //说明有重复变量
                 printf("err: same var %s in Function\n", str.c_str());
@@ -850,14 +852,14 @@ ASTnode *Function(ASTnode *node)
     std::map<std::string, ASTnode*>::iterator iter;
     for (iter = tmpVarMap.begin(); iter!=tmpVarMap.end(); iter++) {
         if (iter->second) {
-            VariableTable::SetVarNode(iter->first, iter->second);
+            globalVariableTable.SetVarNode(iter->first, iter->second);
             Destroy(iter->second);
         }
         else {
-            VariableTable::EraseVar(iter->first);
+            globalVariableTable.EraseVar(iter->first);
         }
     }
-    
+    */
     return mergeLR(node);
 }
 
@@ -895,8 +897,8 @@ ASTnode *Apply(ASTnode *node)
             if (pName->nodeInfo->nodeType == NODETYPE_SYMBOL_VARNAME) {
                 std::string str = *((std::string*)(pName->nodeVal));
                 if (tmpVarMap.find(str)==tmpVarMap.end()) {
-                    tmpVarMap[str]=Duplicate(VariableTable::FindVarNode(str), NULL, NULL);
-                    VariableTable::SetVarNode(str, pVal);
+                    tmpVarMap[str]=Duplicate(globalVariableTable.FindVarNode(str), NULL, NULL);
+                    globalVariableTable.SetVarNode(str, pVal);
                 }
                 else {  //说明变量表有重复
                     printf("err: same var %s in Apply.Function.\n", str.c_str());
@@ -921,11 +923,11 @@ ASTnode *Apply(ASTnode *node)
         std::map<std::string, ASTnode*>::iterator iter;
         for (iter = tmpVarMap.begin(); iter!=tmpVarMap.end(); iter++) {
             if (iter->second) {
-                VariableTable::SetVarNode(iter->first, iter->second);
+                globalVariableTable.SetVarNode(iter->first, iter->second);
                 Destroy(iter->second);
             }
             else {
-                VariableTable::EraseVar(iter->first);
+                globalVariableTable.EraseVar(iter->first);
             }
         }
 
