@@ -1,3 +1,6 @@
+![—› æ1](./20220330_2.png)
+![—› æ2](./20220414.PNG)
+
 # My Mathematica
 
 # 1. ¿ÌƒÓ
@@ -703,6 +706,8 @@ In :=   Times[a, Times[1,7,b,5], Power[a,5], b]
 In :=   a/b*c
         a^b^c^d
         a+b*c^d^(e-f)/g+18-(6+f[16])
+        a/(b/c*d^5)*(2a)^2/d
+        (a+b)*c^(5-3^2)+9/fun[x, y, z+6]
         5-3
         a^b*c
         a/b*c/d/e

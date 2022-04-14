@@ -1278,4 +1278,12 @@ void PrintHelp()
     puts("Sort[List, func]");
     puts("Help[]");
     puts("Exit");
+    puts("");
+    puts("Binary operators:");
+    puts("    []  ()  {}");
+    puts("    ^");
+    puts("    *  /");
+    puts("    +  -");
+    puts("    >  <  ==");
+    puts("    =  :=");
 }
