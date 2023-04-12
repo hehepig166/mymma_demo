@@ -15,4 +15,4 @@ debug:
 	g++ $(FLAG) -o demo.exe -g $(MAIN_FILE) $(COMMON_FILES)
 
 static:
-	g++ -Wall -o demo.exe -static $(MAIN_FILE) $(COMMON_FILES)
+	g++ -Wall -o demo.exe -static $(MAIN_FILE) $(COMMON_FILES) 

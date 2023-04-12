@@ -3,6 +3,12 @@
 
 # My Mathematica
 
+# 0. 参考资料
+计算机代数系统的数学原理
+Mathematica programming: an advanced introduction -Leonid Shifrin
+https://reference.wolfram.com/language/guide/Syntax.html
+https://www.wolfram.com/language/fast-introduction-for-math-students/en/
+
 # 1. 理念
 
 ## 1.1 符号计算
